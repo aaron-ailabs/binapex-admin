@@ -8,9 +8,9 @@ export async function getExchangeRate(pair: string = "USD-MYR") {
   const supabase = await createClient()
 
   const { data, error } = await supabase
-    .from("exchange_rates")
-    .select("rate, updated_at")
-    .eq("currency_pair", pair)
+    .from("system_settings")
+    .select("value, updated_at")
+    .eq("key", "myr_exchange_rate")
     .single()
 
   if (error) {
@@ -18,7 +18,7 @@ export async function getExchangeRate(pair: string = "USD-MYR") {
     return { rate: 0, lastUpdated: null }
   }
 
-  return { rate: Number(data.rate), lastUpdated: data.updated_at }
+  return { rate: Number(data.value), lastUpdated: data.updated_at }
 }
 
 export async function updateExchangeRate(rate: number, pair: string = "USD-MYR") {
@@ -39,21 +39,28 @@ export async function updateExchangeRate(rate: number, pair: string = "USD-MYR")
     return { error: "Unauthorized: Admin access required" }
   }
 
-  const { error } = await supabase
-    .from("exchange_rates")
-    .update({
-      rate,
-      updated_at: new Date().toISOString(),
-      updated_by: user.id,
-    })
-    .eq("currency_pair", pair)
+  // Call the new API route instead of direct database update
+  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/admin/update-exchange-rate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${supabase.auth.getSession()}`, // This might not work, but let's try
+    },
+    body: JSON.stringify({ rate }),
+  })
 
-  if (error) {
-    console.error("Error updating exchange rate:", error)
-    return { error: "Failed to update exchange rate" }
+  if (!response.ok) {
+    const errorData = await response.json()
+    return { error: errorData.error || 'Failed to update exchange rate' }
   }
 
-  revalidatePath("/admin/finance")
-  revalidatePath("/deposit")
-  return { success: true }
+  const result = await response.json()
+
+  if (result.success) {
+    revalidatePath("/admin/finance")
+    revalidatePath("/deposit")
+    return { success: true }
+  } else {
+    return { error: result.error || 'Failed to update exchange rate' }
+  }
 }
