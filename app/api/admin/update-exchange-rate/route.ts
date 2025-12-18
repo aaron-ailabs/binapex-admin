@@ -36,11 +36,11 @@ export async function POST(request: NextRequest) {
 
     const { rate } = validation.data
 
-    // Use admin client for database operations
-    const adminSupabase = createAdminClient()
+    // Use authenticated client for database operations (RLS enforced)
+    // const adminSupabase = createAdminClient()
 
     // Get current value for audit
-    const { data: currentSetting } = await adminSupabase
+    const { data: currentSetting } = await supabase
       .from('system_settings')
       .select('value')
       .eq('key', 'myr_exchange_rate')
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const oldValue = currentSetting?.value || null
 
     // Update system_settings using upsert (handles missing row)
-    const { error: updateError } = await adminSupabase
+    const { error: updateError } = await supabase
       .from('system_settings')
       .upsert({
         key: 'myr_exchange_rate',
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log admin action to audit logs
-    await adminSupabase
+    await supabase
       .from('admin_audit_logs')
       .insert({
         admin_id: user.id,
