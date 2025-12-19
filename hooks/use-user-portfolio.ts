@@ -40,7 +40,8 @@ export function useUserPortfolio() {
         if (wallets) {
             wallets.forEach(w => {
                  if (w.asset === 'USD' || w.asset === 'USDT') {
-                     usdBal += Number(w.balance)
+                     // Calculate AVAILABLE USD (Balance - Locked)
+                     usdBal += Number(w.balance) - Number(w.locked_balance || 0)
                  } else {
                      holdingsMap[w.asset] = Number(w.balance)
                  }

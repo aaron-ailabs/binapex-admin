@@ -242,7 +242,7 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
         <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">Price</span>
             <input
-                type="number"
+                type={activeTab === 'MARKET' ? "text" : "number"}
                 aria-label="Price"
                 value={activeTab === 'MARKET' ? 'Market Price' : priceInput}
                 disabled={activeTab === 'MARKET'}

@@ -193,13 +193,19 @@ export function HistoryTabs({ transactions, trades }: HistoryTabsProps) {
                 },
                 {
                   header: "P/L",
-                  accessor: (row: Trade) => (
-                    <span
-                      className={`font-mono font-bold ${row.profit_loss >= 0 ? "text-emerald-500" : "text-red-500"}`}
-                    >
-                      {row.profit_loss >= 0 ? "+" : ""}${row.profit_loss.toFixed(2)}
-                    </span>
-                  ),
+                  accessor: (row: Trade) => {
+                    const pl = row.profit_loss;
+                    if (pl === null || pl === undefined) {
+                         return <span className="text-gray-500 font-mono">--</span>;
+                    }
+                    return (
+                        <span
+                          className={`font-mono font-bold ${pl >= 0 ? "text-emerald-500" : "text-red-500"}`}
+                        >
+                          {pl >= 0 ? "+" : ""}${pl.toFixed(2)}
+                        </span>
+                    );
+                  },
                 },
                 {
                   header: "Status",

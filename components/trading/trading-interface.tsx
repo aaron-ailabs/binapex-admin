@@ -37,12 +37,24 @@ interface DashboardData {
     commodities: Record<string, AssetInfo>
 }
 
+import { useSearchParams } from 'next/navigation'
+
 export function TradingInterface() {
+  const searchParams = useSearchParams()
+  const initialAsset = searchParams.get('asset')
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [selectedSymbol, setSelectedSymbol] = useState("BTC/USD")
+  const [selectedSymbol, setSelectedSymbol] = useState(initialAsset || "BTC/USD")
   const [selectedCategory, setSelectedCategory] = useState("crypto")
   const [isLoading, setIsLoading] = useState(true)
+
+  // Sync state if URL changes while mounted
+  useEffect(() => {
+    const asset = searchParams.get('asset')
+    if (asset && asset !== selectedSymbol) {
+        setSelectedSymbol(asset)
+    }
+  }, [searchParams])
 
   // Poll Realtime Dashboard
   useEffect(() => {
@@ -68,6 +80,7 @@ export function TradingInterface() {
   const handleSelect = (symbol: string, category: string) => {
       setSelectedSymbol(symbol)
       setSelectedCategory(category)
+      // Optional: Update URL without reload?
   }
 
   if (isLoading && !dashboardData) {
@@ -140,6 +153,7 @@ export function TradingInterface() {
           {/* RIGHT: Order Book & Entry */}
           <div className="w-full lg:w-[320px] flex flex-col gap-4">
              <OrderFormWidget 
+                key={selectedSymbol}
                 symbol={selectedSymbol} 
                 currentPrice={price} 
                 onSuccess={() => {/* Refresh Dashboard handled internally via polling or callback */}} 
