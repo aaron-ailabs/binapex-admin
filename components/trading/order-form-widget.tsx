@@ -44,6 +44,24 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
   // Fee Rates
   const FEE_RATE = isBuy ? 0.006 : 0.011; // 0.6% or 1.1%
 
+  const [payoutRate, setPayoutRate] = useState<number>(85); // Default 85%
+
+  // Fetch Payout Rate
+  useEffect(() => {
+    const fetchPayoutRate = async () => {
+        const { data, error } = await supabase
+            .from('assets')
+            .select('payout_rate')
+            .eq('symbol', assetSymbol)
+            .single();
+        
+        if (data?.payout_rate) {
+            setPayoutRate(data.payout_rate);
+        }
+    };
+    fetchPayoutRate();
+  }, [assetSymbol]);
+
   // Update Price Input on Current Price Change (only if Market)
   useEffect(() => {
     if (activeTab === 'MARKET') {
@@ -151,6 +169,10 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
   const price = parseFloat(priceInput) || currentPrice;
   const estTotal = qty * price;
   const estFee = estTotal * FEE_RATE; // 0.6% or 1.1% of Total Value
+  
+  // Calculate Est. Payout (Investment + Profit)
+  const potentialProfit = estTotal * (payoutRate / 100);
+  const estPayout = estTotal + potentialProfit;
 
   return (
     <div className="bg-[#1E1E1E] border border-gray-800 rounded-lg p-3 font-sans text-sm shadow-xl flex flex-col gap-3 min-w-[300px]">
@@ -285,16 +307,16 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
             </div>
         </div>
 
-        {/* TOTAL & FEE */}
+        {/* TOTAL & PAYOUT */}
         <div className="flex flex-col gap-1 border-t border-white/5 pt-2">
             <div className="flex justify-between text-xs text-gray-400">
-                <span>Fee ({ isBuy ? '0.6%' : '1.1%'})</span>
-                <span>{estFee > 0 ? `≈ ${estFee.toFixed(2)} ${quoteSymbol}` : '--'}</span>
+                <span>Payout Rate</span>
+                <span className="text-emerald-400 font-bold">{payoutRate}%</span>
             </div>
             <div className="flex justify-between items-center">
-                 <span className="text-xs text-gray-300">Est. Total</span>
+                 <span className="text-xs text-gray-300">Est. Payout</span>
                  <span className="text-sm font-bold text-white font-mono">
-                    {estTotal > 0 ? `${estTotal.toFixed(2)} ${quoteSymbol}` : '--'}
+                    {estTotal > 0 ? `${estPayout.toFixed(2)} ${quoteSymbol}` : '--'}
                  </span>
             </div>
         </div>

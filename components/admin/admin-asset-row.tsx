@@ -55,8 +55,11 @@ export function AdminAssetRow({ asset }: AdminAssetRowProps) {
 
   return (
     <tr className="border-b border-white/5 hover:bg-white/5 transition-colors">
-      <td className="p-4 font-medium text-white">{asset.symbol}</td>
-      <td className="p-4 text-gray-400">{asset.name}</td>
+      <td className="p-4">
+        <div className="font-medium text-white">{asset.symbol}</div>
+        <div className="text-xs text-gray-500 md:hidden">{asset.name}</div>
+      </td>
+      <td className="p-4 text-gray-400 hidden md:table-cell">{asset.name}</td>
       <td className="p-4">
         <div className="flex items-center gap-2 max-w-[150px]">
           <div className="relative w-full">

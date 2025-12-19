@@ -33,8 +33,8 @@ export default async function AdminAssetsPage() {
                 <table className="w-full text-left text-sm">
                   <thead className="bg-white/5 text-gray-400 uppercase font-mono text-xs">
                     <tr>
-                      <th className="p-4">Symbol</th>
-                      <th className="p-4">Name</th>
+                      <th className="p-4">Asset</th>
+                      <th className="p-4 hidden md:table-cell">Name</th>
                       <th className="p-4">Payout Rate</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
