@@ -3,11 +3,21 @@ import { createClient } from '@/lib/supabase/client';
 import { useState, useEffect } from 'react';
 import { Database } from '@/types/supabase';
 
-// Define the shape of the data we fetch, extending the base Row with the joined trading_pair
-type LimitOrder = Database['public']['Tables']['limit_orders']['Row'] & {
-  trading_pairs: {
-    symbol: string;
-  } | null;
+// Define the shape based on 'orders' table
+// Define the shape based on 'orders' table (Live DB Schema)
+// Manual definition to bypass stale generated types
+type LimitOrder = {
+  id: string;
+  user_id: string;
+  pair: string;
+  side: string;
+  type: string;
+  price: number | null;
+  amount: number;
+  filled_amount: number | null;
+  status: string;
+  created_at: string;
+  fee_rate: number | null;
 };
 
 export function UserDashboard({ symbol }: { symbol?: string }) {
