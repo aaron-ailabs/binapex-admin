@@ -56,7 +56,8 @@ export async function updateUserProfile(userId: string, data: any) {
       ip_address: "system" // Capture IP if possible or leave null
     })
 
-    revalidatePath("/admin/users/[id]", "page")
+    revalidatePath("/admin/users/[id]", "page") // Refresh Detail
+    revalidatePath("/admin/users") // Refresh List
     return { success: true }
   } catch (error: any) {
     console.error("updateUserProfile error:", error)
@@ -96,6 +97,7 @@ export async function creditUserBonus(userId: string, amount: number) {
     })
 
     revalidatePath("/admin/users/[id]", "page")
+    revalidatePath("/admin/users")
     return { success: true }
   } catch (error: any) {
     console.error("creditUserBonus error:", error)

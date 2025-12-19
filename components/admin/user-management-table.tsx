@@ -13,14 +13,14 @@ import { useLiveData } from "@/hooks/use-live-data"
 interface User {
   id: string
   email: string
-  full_name: string | null
+  full_name: string
   balance_usd: number
   bonus_balance: number
   membership_tier: string
   role: string
   risk_mode: string
   kyc_verified: boolean
-  created_at: string
+  joined_at: string
   credit_score: number | null
 }
 
@@ -29,7 +29,9 @@ interface UserManagementTableProps {
 }
 
 export function UserManagementTable({ users: initialUsers }: UserManagementTableProps) {
-  const users = useLiveData<User>("profiles", initialUsers, { column: "created_at", ascending: false })
+  // const users = useLiveData<User>("profiles", initialUsers, { column: "created_at", ascending: false }) 
+  // Disable LiveData to ensure consistency with Server Action data.
+  const users = initialUsers
   const [searchQuery, setSearchQuery] = useState("")
 
   const filteredUsers = users.filter(
@@ -188,7 +190,7 @@ export function UserManagementTable({ users: initialUsers }: UserManagementTable
                     </td>
                     <td className="py-3 px-4">
                       <p className="text-sm text-muted-foreground whitespace-nowrap">
-                        {format(new Date(user.created_at), "MMM dd, yyyy")}
+                        {format(new Date(user.joined_at), "MMM dd, yyyy")}
                       </p>
                     </td>
                     <td className="py-3 px-4 text-right">
