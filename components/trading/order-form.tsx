@@ -45,12 +45,10 @@ export function OrderForm({ symbol = 'BTC-USD', currentPrice = 0, onSuccess }: {
 
       // 3. Get Payout Rate from assets
       // Try exact match first, then formatted
-      // Our assets table might have "BTC/USD" or "BTC-USD".
-      // Let's try to match both or just normalized.
       const { data: assetData } = await supabase.from('assets')
         .select('payout_rate')
         .or(`symbol.eq.${symbol},symbol.eq.${normalizedSymbol}`)
-        .single();
+        .maybeSingle();
       
       if (assetData?.payout_rate) {
         setPayoutRate(assetData.payout_rate);
@@ -104,7 +102,7 @@ export function OrderForm({ symbol = 'BTC-USD', currentPrice = 0, onSuccess }: {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            pair: normalizedSymbol, // e.g. BTC-USD
+            pair: normalizedSymbol.replace(/[^a-zA-Z0-9]/g, ''), // Clean to match trading_pairs (e.g. BTCUSD, USDSGD)
             side: side, // 'BUY' or 'SELL'
             type: orderType, // 'LIMIT' or 'MARKET'
             amount: quantity, // Asset Amount

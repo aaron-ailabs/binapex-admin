@@ -49,18 +49,19 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
   // Fetch Payout Rate
   useEffect(() => {
     const fetchPayoutRate = async () => {
+        // Try exact match first (e.g. "Gold", "USD/SGD"), then parts
         const { data, error } = await supabase
             .from('assets')
             .select('payout_rate')
-            .eq('symbol', assetSymbol)
-            .single();
+            .or(`symbol.eq.${symbol},symbol.eq.${assetSymbol},symbol.eq.${symbol.replace('/', '-')}`)
+            .maybeSingle(); // Use maybeSingle to avoid error if multiple match (unlikely with unique constraint) or none
         
         if (data?.payout_rate) {
             setPayoutRate(data.payout_rate);
         }
     };
     fetchPayoutRate();
-  }, [assetSymbol]);
+  }, [assetSymbol, symbol]);
 
   // Update Price Input on Current Price Change (only if Market)
   useEffect(() => {
@@ -122,7 +123,7 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
              // Use RPC
              const { data, error } = await supabase.rpc('execute_market_order', {
                  p_user_id: user.id,
-                 p_symbol: symbol.replace('/', '-'), // Live DB might expect pair? RPC arg says p_symbol, but let's stick to normalized.
+                 p_symbol: symbol.replace(/[^a-zA-Z0-9]/g, ''), // Clean to alphanumeric (e.g. USD/SGD -> USDSGD) to match trading_pairs
                  p_side: side,
                  p_quantity: qty, // Live DB expects p_quantity
                  p_price: price   // Live DB expects p_price
@@ -137,7 +138,7 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
             // Direct Insert
             const { error } = await supabase.from('orders').insert({
                 user_id: user.id,
-                pair: symbol.replace('/', '-'), // Live DB uses 'pair'
+                pair: symbol.replace(/[^a-zA-Z0-9]/g, ''), // Clean to match trading_pairs
                 side: side,
                 type: activeTab,
                 price: price,
