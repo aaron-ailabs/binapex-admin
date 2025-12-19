@@ -172,12 +172,10 @@ export function DepositForm({ banks, userId, currentBalance, exchangeRate }: Dep
           <GlassCard className="mt-4 p-6 text-center">
             <p className="text-sm text-gray-400 mb-4">DuitNow QR Code</p>
             <div className="inline-block p-4 bg-white rounded-lg">
-              <Image
+              <img
                 src={selectedBank.qr_code_url || "/placeholder.svg"}
                 alt="DuitNow QR Code"
-                width={200}
-                height={200}
-                className="mx-auto"
+                className="mx-auto w-[200px] h-[200px] object-contain"
               />
             </div>
           </GlassCard>

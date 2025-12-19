@@ -5,6 +5,7 @@ import { DepositForm } from "@/components/banking/deposit-form"
 import { GlassCard } from "@/components/ui/glass-card"
 import { AlertCircle } from "lucide-react"
 import { getExchangeRate } from "@/app/actions/exchange-rate"
+import { getPlatformBankAccounts } from "@/app/actions/get-banks"
 
 export default async function DepositPage() {
   const supabase = await createClient()
@@ -19,7 +20,7 @@ export default async function DepositPage() {
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  const { data: banks } = await supabase.from("platform_bank_accounts").select("*").eq("is_active", true)
+  const banks = await getPlatformBankAccounts()
 
   const { rate } = await getExchangeRate()
 

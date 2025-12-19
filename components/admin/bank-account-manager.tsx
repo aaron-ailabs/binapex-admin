@@ -64,14 +64,14 @@ export function BankAccountManager({ accounts: initialAccounts }: BankAccountMan
         const fileExt = qrFile.name.split(".").pop()
         const fileName = `bank_${Date.now()}.${fileExt}`
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("platform-assets")
+          .from("platform_qr_codes")
           .upload(fileName, qrFile)
 
         if (uploadError) throw uploadError
 
         const {
           data: { publicUrl },
-        } = supabase.storage.from("platform-assets").getPublicUrl(fileName)
+        } = supabase.storage.from("platform_qr_codes").getPublicUrl(fileName)
         qrCodeUrl = publicUrl
       }
 
