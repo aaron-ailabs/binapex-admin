@@ -84,11 +84,11 @@ export function WithdrawalApprovalList() {
   const handleApprove = async (withdrawalId: string) => {
     setProcessing(withdrawalId)
 
-    const { error } = await supabase.from("transactions").update({ status: "completed" }).eq("id", withdrawalId)
+    const { error } = await supabase.rpc("approve_withdrawal", { transaction_id: withdrawalId })
 
     if (error) {
       console.error("[v0] Error approving withdrawal:", error)
-      toast.error("Failed to approve withdrawal")
+      toast.error(error.message || "Failed to approve withdrawal")
     } else {
       toast.success("Withdrawal approved successfully")
       fetchWithdrawals()
@@ -100,23 +100,14 @@ export function WithdrawalApprovalList() {
   const handleReject = async (withdrawalId: string, userId: string, amount: number) => {
     setProcessing(withdrawalId)
 
-    const { error: balanceError } = await supabase.rpc("credit_user_balance", {
-      p_user_id: userId,
-      p_amount: amount,
+    const { error } = await supabase.rpc("reject_withdrawal", { 
+      transaction_id: withdrawalId,
+      reason: "Rejected by admin" // Could add a prompt for this later
     })
-
-    if (balanceError) {
-      console.error("[v0] Error refunding balance:", balanceError)
-      toast.error("Failed to refund balance")
-      setProcessing(null)
-      return
-    }
-
-    const { error } = await supabase.from("transactions").update({ status: "rejected" }).eq("id", withdrawalId)
 
     if (error) {
       console.error("[v0] Error rejecting withdrawal:", error)
-      toast.error("Failed to reject withdrawal")
+      toast.error(error.message || "Failed to reject withdrawal")
     } else {
       toast.success("Withdrawal rejected and balance refunded")
       fetchWithdrawals()

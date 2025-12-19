@@ -78,22 +78,27 @@ export async function submitWithdrawal(data: {
     return { error: validation.error.errors[0].message }
   }
 
-  // Atomic withdrawal request
-  const { data: result, error: rpcError } = await supabase.rpc("request_withdrawal_atomic", {
-      p_user_id: user.id,
-      p_amount: validation.data.amount,
-      p_bank_account_id: validation.data.user_bank_account_id
+  // Fetch bank details first
+  const { data: bankAccount, error: bankError } = await supabase
+    .from("user_bank_accounts")
+    .select("bank_name, account_name, account_number")
+    .eq("id", validation.data.user_bank_account_id)
+    .single()
+
+  if (bankError || !bankAccount) {
+    return { error: "Bank account not found" }
+  }
+
+  // Atomic withdrawal request via RPC
+  const { error: rpcError } = await supabase.rpc("request_withdrawal", {
+    amount: validation.data.amount,
+    bank_details: bankAccount
   })
 
   // Handle network/RPC errors
   if (rpcError) {
       console.error("Withdrawal RPC error:", rpcError)
       return { error: rpcError.message }
-  }
-
-  // Handle logic errors (insufficient funds, etc)
-  if (!result || !result.success) {
-      return { error: result?.error || "Withdrawal failed" }
   }
 
   revalidatePath("/withdrawal")
