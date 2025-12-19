@@ -90,19 +90,18 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
 
     if (effectivePrice <= 0) return;
 
-    if (isBuy) {
-        // Max Asset Qty = (USD Balance) / (Price * (1 + FeeRate)) ?
-        // Spec: "(USD Balance / Price) / 1.006" -> usage of / 1.006 implies dividing by (1 + fee) approx if fee is 0.6%.
-        // 0.6% = 0.006. So 1.006 is correct.
-        const maxAssetQty = (availableBalance / effectivePrice) / (1 + FEE_RATE); 
+        if (isBuy) {
+        // Max Asset Qty = (USD Balance) / (Price * (1 + FeeRate))
+        const maxAssetQty = (availableBalance / effectivePrice) / (1 + FEE_RATE);
         calculatedAmount = maxAssetQty * (val / 100);
     } else {
-        // Sell
         const maxAssetQty = availableBalance; // It's already in BTC
         calculatedAmount = maxAssetQty * (val / 100);
     }
 
-    setAmountInput(calculatedAmount.toFixed(6)); // Crypto precision
+    // Fix: Floor to 6 decimals to avoid "Rounding Up" exceeding balance
+    const flooredAmount = Math.floor(calculatedAmount * 1000000) / 1000000;
+    setAmountInput(flooredAmount.toFixed(6));
   };
 
   const handleExecute = async () => {

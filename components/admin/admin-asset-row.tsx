@@ -54,14 +54,28 @@ export function AdminAssetRow({ asset }: AdminAssetRowProps) {
   }
 
   return (
-    <tr className="border-b border-white/5 hover:bg-white/5 transition-colors">
-      <td className="p-4">
-        <div className="font-medium text-white">{asset.symbol}</div>
-        <div className="text-xs text-gray-500 md:hidden">{asset.name}</div>
+    <tr className="flex flex-col md:table-row border-b border-white/5 hover:bg-white/5 transition-colors p-4 md:p-0 gap-4">
+      {/* Asset Info */}
+      <td className="md:p-4 flex justify-between items-center md:table-cell">
+        <div>
+           <div className="font-medium text-white">{asset.symbol}</div>
+           <div className="text-xs text-gray-500 md:hidden">{asset.name}</div>
+        </div>
+        {/* Status Indicator for Mobile */}
+        <div className="md:hidden">
+             <span className={`text-[10px] px-2 py-0.5 rounded ${asset.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                {asset.is_active ? 'Active' : 'Inactive'}
+             </span>
+        </div>
       </td>
+
+      {/* Name (Desktop Only) */}
       <td className="p-4 text-gray-400 hidden md:table-cell">{asset.name}</td>
-      <td className="p-4">
-        <div className="flex items-center gap-2 max-w-[150px]">
+
+      {/* Payout Rate input */}
+      <td className="md:p-4 md:table-cell block">
+        <label className="text-xs text-gray-500 mb-1 block md:hidden">Payout Rate (%)</label>
+        <div className="flex items-center gap-2 max-w-full md:max-w-[150px]">
           <div className="relative w-full">
             <Input
               type="number"
@@ -69,23 +83,26 @@ export function AdminAssetRow({ asset }: AdminAssetRowProps) {
               max="100"
               value={payoutRate}
               onChange={handleChange}
-              className="bg-black/20 border-white/10 pr-8"
+              className="bg-black/20 border-white/10 pr-8 w-full"
             />
             <span className="absolute right-3 top-2.5 text-xs text-gray-500">%</span>
           </div>
         </div>
       </td>
-      <td className="p-4 text-right">
-        {hasChanges && (
-          <Button 
-            size="sm" 
-            onClick={handleSave} 
-            disabled={isSaving}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          </Button>
-        )}
+
+      {/* Actions */}
+      <td className="md:p-4 md:text-right md:table-cell block">
+         <div className="flex justify-end w-full">
+            <Button 
+                size="sm" 
+                onClick={handleSave} 
+                disabled={isSaving || !hasChanges}
+                className={`w-full md:w-auto ${hasChanges ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-white/5 text-gray-500'}`}
+            >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2 md:mr-0" />}
+                <span className="md:hidden">{isSaving ? 'Saving...' : 'Save Changes'}</span>
+            </Button>
+         </div>
       </td>
     </tr>
   )

@@ -31,7 +31,7 @@ export default async function AdminAssetsPage() {
             <GlassCard className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-white/5 text-gray-400 uppercase font-mono text-xs">
+                  <thead className="bg-white/5 text-gray-400 uppercase font-mono text-xs hidden md:table-header-group">
                     <tr>
                       <th className="p-4">Asset</th>
                       <th className="p-4 hidden md:table-cell">Name</th>

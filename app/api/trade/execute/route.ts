@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       .select('price')
       .eq('pair', pair)
       .eq('side', 'SELL')
-      .eq('status', 'OPEN')
+      .eq('status', 'open')
       .order('price', { ascending: true })
       .limit(1);
       
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
   // 4. Matching Engine
   // Fetch opposite side
-  const oppositeSide = side === 'BUY' ? 'SELL' : 'BUY';
+  const oppositeSide = side === 'BUY' ? 'sell' : 'buy'; // Database stores lowercase
   const orderDir = side === 'BUY' ? true : false; // Buy -> Match Low Sells (Ascending)
 
   // Query Loop
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     .select('*')
     .eq('pair', pair)
     .eq('side', oppositeSide)
-    .eq('status', 'OPEN')
+    .eq('status', 'open')
     .order('price', { ascending: orderDir }) // Buy wants Lowest Sell. Sell wants Highest Buy (desc).
     // Wait, Sell wants Highest Buy. So if side=SELL, opposite=BUY, order=Desc (false).
     // If side=BUY, opposite=SELL, order=Asc (true).
