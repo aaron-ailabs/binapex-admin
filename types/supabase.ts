@@ -288,16 +288,22 @@ export type Database = {
         Row: {
           amount: number
           asset_id: string
+          asset_symbol: string | null
           created_at: string | null
+          direction: "UP" | "DOWN" | null
+          end_time: string | null
           entry_price: number
           exit_price: number | null
+          fee_percentage: number | null
           id: string
           leverage: number
           margin_used: number
+          payout_rate: number | null
           profit_loss: number | null
           side: string
           status: string
           stop_loss: number | null
+          strike_price: number | null
           take_profit: number | null
           type: string
           updated_at: string | null
@@ -306,16 +312,22 @@ export type Database = {
         Insert: {
           amount: number
           asset_id: string
+          asset_symbol?: string | null
           created_at?: string | null
+          direction?: "UP" | "DOWN" | null
+          end_time?: string | null
           entry_price: number
           exit_price?: number | null
+          fee_percentage?: number | null
           id?: string
           leverage?: number
           margin_used: number
+          payout_rate?: number | null
           profit_loss?: number | null
           side: string
           status?: string
           stop_loss?: number | null
+          strike_price?: number | null
           take_profit?: number | null
           type: string
           updated_at?: string | null
@@ -324,16 +336,22 @@ export type Database = {
         Update: {
           amount?: number
           asset_id?: string
+          asset_symbol?: string | null
           created_at?: string | null
+          direction?: "UP" | "DOWN" | null
+          end_time?: string | null
           entry_price?: number
           exit_price?: number | null
+          fee_percentage?: number | null
           id?: string
           leverage?: number
           margin_used?: number
+          payout_rate?: number | null
           profit_loss?: number | null
           side?: string
           status?: string
           stop_loss?: number | null
+          strike_price?: number | null
           take_profit?: number | null
           type?: string
           updated_at?: string | null
@@ -790,6 +808,18 @@ export type Database = {
           last_name: string
         }
         Returns: undefined
+      }
+      execute_binary_trade: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+          p_asset_symbol: string
+          p_direction: string
+          p_duration_seconds: number
+          p_strike_price: number
+          p_payout_rate: number
+        }
+        Returns: Json
       }
       credit_user_balance: {
         Args: {

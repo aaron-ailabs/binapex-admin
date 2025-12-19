@@ -4,7 +4,13 @@
 
 
 import { useState, useEffect } from "react"
-import dynamic from 'next/dynamic'
+  // Use the new hook for data
+  import { useMarketData } from '@/hooks/useMarketData' 
+  // Note: I need to add this import to the top of file, but I cannot do it in this block easily.
+  // Instead, I will replace the component logic.
+  
+  // Actually, wait. I can't import in the middle of a file with replace_file_content properly if it's not a block replacement.
+  // I should rewrite the component start to include the import and the hook usage.
 import { OrderFormWidget } from "./order-form-widget"
 import { OrderBook } from "./order-book"
 import { UserDashboard } from "./user-dashboard"
@@ -12,6 +18,7 @@ import { MarketWidget } from "./market-widget"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
+import { useMarketData } from "@/hooks/useMarketData"
 
 // Dynamic import to avoid SSR issues with lightweight-charts
 const CandlestickChart = dynamic(
@@ -56,7 +63,7 @@ export function TradingInterface() {
     }
   }, [searchParams])
 
-  // Poll Realtime Dashboard
+  // 1. POLL DASHBOARD (For Asset Selector & Global State)
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
@@ -73,35 +80,36 @@ export function TradingInterface() {
     }
 
     fetchDashboard()
-    const interval = setInterval(fetchDashboard, 5000) // Faster polling
+    const interval = setInterval(fetchDashboard, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  // 2. USE MARKET DATA HOOK (For Selected Asset)
+  const { candles, currentPrice: hookPrice, change24h: hookChange } = useMarketData(selectedSymbol)
 
   const handleSelect = (symbol: string, category: string) => {
       setSelectedSymbol(symbol)
       setSelectedCategory(category)
-      // Optional: Update URL without reload?
   }
 
   if (isLoading && !dashboardData) {
       return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-[#F59E0B]" /></div>
   }
   
-  // Safe access to categories
   const stocks = dashboardData?.stocks || {}
   const forex = dashboardData?.forex || {}
   const crypto = dashboardData?.crypto || {}
   const commodities = dashboardData?.commodities || {}
   
-  // Current price for header & order form
+  // Priority: Hook Price > Dashboard Price > 0
   const currentAssetInfo = dashboardData 
     ? Object.values(dashboardData)
         .flatMap((cat) => Object.values(cat) as AssetInfo[])
         .find((asset) => asset.symbol === selectedSymbol) || null
     : null;
 
-  // Normalize price (crypto has price, forex has rate)
-  const price = currentAssetInfo?.price || currentAssetInfo?.rate || 0
+  const price = hookPrice > 0 ? hookPrice : (currentAssetInfo?.price || currentAssetInfo?.rate || 0)
+  const changePct = hookChange !== 0 ? hookChange : (currentAssetInfo?.change_pct || 0)
 
   return (
     <div className="flex flex-col gap-4 p-4 min-h-screen bg-black text-gray-200 font-sans">
@@ -119,9 +127,9 @@ export function TradingInterface() {
                   <Badge className="bg-[#F59E0B] text-black font-bold text-lg px-2 py-0 h-fit">
                       ${price.toFixed(price > 1000 ? 2 : 5)}
                   </Badge>
-                  <span className={`text-sm font-mono font-bold ${ (currentAssetInfo?.change_pct || 0) >= 0 ? 'text-emerald-500' : 'text-red-500' }`}>
-                      {(currentAssetInfo?.change_pct || 0) > 0 ? "+" : ""}
-                      {((currentAssetInfo?.change_pct || 0) * 100).toFixed(2)}%
+                  <span className={`text-sm font-mono font-bold ${ changePct >= 0 ? 'text-emerald-500' : 'text-red-500' }`}>
+                      {changePct > 0 ? "+" : ""}
+                      {(changePct * 100).toFixed(2)}%
                   </span>
               </div>
           </div>
@@ -145,7 +153,7 @@ export function TradingInterface() {
 
           <div className="flex-1 flex flex-col gap-4 min-w-0">
              <GlassCard className="flex-1 min-h-[400px] p-1 overflow-hidden relative border border-white/5">
-                 <CandlestickChart symbol={selectedSymbol} />
+                 <CandlestickChart symbol={selectedSymbol} data={candles} />
              </GlassCard>
              <UserDashboard symbol={selectedSymbol} />
           </div>

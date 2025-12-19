@@ -18,7 +18,7 @@ interface ChartProps {
   symbol?: string; // e.g. "BTC-USD"
 }
 
-export const CandlestickChart = ({ symbol = "BTC-USD" }: ChartProps) => {
+export const CandlestickChart = ({ symbol = "BTC-USD", data }: ChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -62,38 +62,25 @@ export const CandlestickChart = ({ symbol = "BTC-USD" }: ChartProps) => {
     chartRef.current = chart;
     seriesRef.current = newSeries as ISeriesApi<"Candlestick">;
 
-    // 3. FETCH HISTORICAL DATA
-    const fetchData = async () => {
-      try {
-        // Convert display symbol (BTC/USD) to API format (BTC-USD)
-        const apiSymbol = symbol.replace('/', '-');
-        
-        // Calls our Next.js API
-        const response = await fetch(`/api/market/history?symbol=${apiSymbol}&period=1mo&interval=1d`);
-        const data = await response.json();
-        
-        if (data && Array.isArray(data)) {
-            // Format for Lightweight Charts
-            const candleData = data.map((d: any) => ({
-                time: d.time as string, // '2023-12-01'
-                open: Number(d.open),
-                high: Number(d.high),
-                low: Number(d.low),
-                close: Number(d.close),
-            }));
-            newSeries.setData(candleData);
-            
-            // Set current price for display
-            if (candleData.length > 0) {
-                setCurrentPrice(candleData[candleData.length - 1].close);
-            }
-        }
-      } catch (err) {
-        console.error("Failed to load market data:", err);
-      }
-    };
+    // 3. UPDATE SERIES DATA
+    if (data && data.length > 0) {
+        // Sort by time to ensure lightweight-charts doesn't error on unsorted data
+        const sortedData = [...data].sort((a, b) => {
+            const timeA = typeof a.time === 'string' ? new Date(a.time).getTime() : a.time;
+            const timeB = typeof b.time === 'string' ? new Date(b.time).getTime() : b.time;
+            return timeA - timeB;
+        });
 
-    fetchData();
+        const chartData: CandlestickData[] = sortedData.map(d => ({
+            time: d.time as Time,
+            open: d.open,
+            high: d.high,
+            low: d.low,
+            close: d.close
+        }));
+
+        newSeries.setData(chartData);
+    }
 
     // 4. HANDLE RESIZE
     const handleResize = () => {
@@ -108,7 +95,7 @@ export const CandlestickChart = ({ symbol = "BTC-USD" }: ChartProps) => {
       window.removeEventListener('resize', handleResize);
       chart.remove();
     };
-  }, [symbol]);
+  }, [symbol, data]);
 
   return (
     <div className="w-full h-full bg-black border border-white/10 rounded-lg overflow-hidden flex flex-col">

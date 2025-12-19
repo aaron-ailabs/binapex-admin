@@ -144,7 +144,7 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
                 price: price,
                 amount: qty, // Live DB uses 'amount' (Quantity)
                 // fee: ... // Live DB has fee_percentage or fee_rate? 'fee_percentage' numeric, 'fee_rate' numeric.
-                fee_rate: FEE_RATE, // Using fee_rate column
+                fee_percentage: FEE_RATE, // Using fee_percentage column (Corrected from fee_rate)
                 status: 'OPEN' // Limit orders start as OPEN
             });
 
@@ -165,8 +165,10 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
   };
 
   // Fees & Totals for Display
+  // Fees & Totals for Display
   const qty = parseFloat(amountInput) || 0;
-  const price = parseFloat(priceInput) || currentPrice;
+  const effectiveCurrentPrice = currentPrice > 0 ? currentPrice : 0; // Use 0 if invalid, avoid fake data unless needed
+  const price = parseFloat(priceInput) || effectiveCurrentPrice;
   const estTotal = qty * price;
   const estFee = estTotal * FEE_RATE; // 0.6% or 1.1% of Total Value
   
@@ -249,7 +251,7 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
                 disabled={activeTab === 'MARKET'}
                 onChange={(e) => setPriceInput(e.target.value)}
                 placeholder={currentPrice.toFixed(2)}
-                className={`w-full bg-black border border-gray-700 rounded p-2 pl-12 text-right text-white text-xs font-mono focus:outline-none focus:border-gray-500 ${activeTab === 'MARKET' ? 'text-gray-500 italic' : ''}`}
+                className={`w-full bg-black border border-gray-700 rounded p-2 pl-12 pr-16 text-right text-white text-xs font-mono focus:outline-none focus:border-gray-500 ${activeTab === 'MARKET' ? 'text-gray-500 italic' : ''}`}
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">{quoteSymbol}</span>
         </div>
@@ -281,7 +283,7 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, onSucces
                     // Reset slider visual if user types manually, or calc implementation
                     setSliderValue(0); 
                 }}
-                className="w-full bg-black border border-gray-700 rounded p-2 pl-14 text-right text-white text-xs font-mono focus:outline-none focus:border-gray-500"
+                className="w-full bg-black border border-gray-700 rounded p-2 pl-14 pr-16 text-right text-white text-xs font-mono focus:outline-none focus:border-gray-500"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">{assetSymbol}</span>
         </div>
