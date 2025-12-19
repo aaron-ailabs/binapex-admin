@@ -13,7 +13,7 @@ import { useState, useEffect } from "react"
   // I should rewrite the component start to include the import and the hook usage.
 import { OrderFormWidget } from "./order-form-widget"
 import { OrderBook } from "./order-book"
-import { UserDashboard } from "./user-dashboard"
+import { TradeList } from "./trade-list"
 import { MarketWidget } from "./market-widget"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Badge } from "@/components/ui/badge"
@@ -155,7 +155,7 @@ export function TradingInterface() {
              <GlassCard className="flex-1 min-h-[400px] p-1 overflow-hidden relative border border-white/5">
                  <CandlestickChart symbol={selectedSymbol} data={candles} />
              </GlassCard>
-             <UserDashboard symbol={selectedSymbol} />
+             <TradeList />
           </div>
 
           {/* RIGHT: Order Book & Entry */}

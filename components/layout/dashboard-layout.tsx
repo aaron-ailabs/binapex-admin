@@ -56,13 +56,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       
       // Use wallets[0].balance if available, else fallback to profile.balance_usd
       if (profile) {
-        // @ts-ignore - Supabase types might verify specific join syntax, suppressing for immediate fix
+        // @ts-ignore - Supabase types might verify specific join syntax
         const walletBalance = profile.wallets?.[0]?.balance
         // Use wallet balance if it exists (source of truth), otherwise profile cache
         setBalance(walletBalance !== undefined ? walletBalance : profile.balance_usd)
       }
     }
+
     fetchBalance()
+
+    // Listen for custom wallet update events (e.g. from trade settlement)
+    const handleWalletUpdate = () => fetchBalance()
+    window.addEventListener('wallet_update', handleWalletUpdate)
+
+    return () => {
+        window.removeEventListener('wallet_update', handleWalletUpdate)
+    }
   }, [])
 
   const handleLogout = async () => {
