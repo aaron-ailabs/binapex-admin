@@ -16,6 +16,12 @@ interface DepositApprovalListProps {
   deposits: any[]
 }
 
+const getReceiptUrl = (url: string | null) => {
+  if (!url) return null
+  if (url.startsWith("http")) return url
+  return `https://kzpbaacqhpszizgsyflc.supabase.co/storage/v1/object/public/receipts/${url}`
+}
+
 export function DepositApprovalList({ deposits: initialDeposits }: DepositApprovalListProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -102,6 +108,12 @@ export function DepositApprovalList({ deposits: initialDeposits }: DepositApprov
                     <p className="text-sm text-muted-foreground">
                       {deposit.full_name || "Unknown"} ({deposit.email})
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Current Balance:{" "}
+                      <span className="text-foreground font-medium">
+                        ${(deposit.user?.wallets?.[0]?.balance || 0).toLocaleString()}
+                      </span>
+                    </p>
                   </div>
                   <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                     Pending
@@ -154,13 +166,13 @@ export function DepositApprovalList({ deposits: initialDeposits }: DepositApprov
                 {deposit.receipt_url ? (
                   <div className="space-y-2">
                     <img
-                      src={deposit.receipt_url || "/placeholder.svg"}
+                      src={getReceiptUrl(deposit.receipt_url) || "/placeholder.svg"}
                       alt="Receipt"
                       className="w-full rounded-lg border border-border cursor-pointer hover:border-primary/50 transition-colors"
-                      onClick={() => setViewingReceipt(deposit.receipt_url)}
+                      onClick={() => setViewingReceipt(getReceiptUrl(deposit.receipt_url))}
                     />
                     <a
-                      href={deposit.receipt_url}
+                      href={getReceiptUrl(deposit.receipt_url) || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80"

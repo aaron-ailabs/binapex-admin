@@ -10,28 +10,31 @@ export default async function AdminFinancePage() {
 
   const { data: pendingDeposits } = await supabase
     .from("transactions")
-    .select("*")
+    .select(`
+      *,
+      user:user_id (
+        full_name,
+        email,
+        wallets (
+          balance
+        )
+      )
+    `)
     .eq("type", "deposit")
     .eq("status", "pending")
     .order("created_at", { ascending: false })
 
   const exchangeData = await getExchangeRate()
 
-  // Fetch user profiles for all depositing users
-  const userIds = pendingDeposits?.map((d: any) => d.user_id) || []
-  const { data: profiles } =
-    userIds.length > 0 ? await supabase.from("profiles").select("id, full_name, email").in("id", userIds) : { data: [] }
-
-  // Combine deposit and profile data
+  // Format data for the UI
   const depositsWithProfiles =
-    pendingDeposits?.map((deposit: any) => {
-      const profile = profiles?.find((p: any) => p.id === deposit.user_id)
-      return {
-        ...deposit,
-        full_name: profile?.full_name || "Unknown",
-        email: profile?.email || "Unknown",
-      }
-    }) || []
+    pendingDeposits?.map((deposit: any) => ({
+      ...deposit,
+      full_name: deposit.user?.full_name || "Unknown",
+      email: deposit.user?.email || "Unknown",
+      // Pass the user object structure that specific components might need
+      user: deposit.user,
+    })) || []
 
   return (
     <AdminRoute>

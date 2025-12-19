@@ -90,15 +90,15 @@ export function DepositForm({ banks, userId, currentBalance, exchangeRate }: Dep
         throw new Error("Failed to upload receipt")
       }
 
-      const { path } = await uploadResponse.json()
+      const { url } = await uploadResponse.json()
 
-      if (!path) {
-        throw new Error("Upload response missing path")
+      if (!url) {
+        throw new Error("Upload response missing url")
       }
       
       const result = await submitDeposit({
         amount: amountNum,
-        receipt_url: path, // Storing path
+        receipt_url: url, // Storing full public URL
         platform_bank_account_id: selectedBank?.id
       })
 
