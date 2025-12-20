@@ -9,12 +9,25 @@ import type { Transaction, Trade, Asset } from "@/lib/types/database"
 import { format } from "date-fns"
 import { ExternalLink } from "lucide-react"
 
+import { PaginationControls } from "@/components/ui/pagination-controls"
+
 interface HistoryTabsProps {
   transactions: Transaction[]
   trades: (Trade & { asset?: Asset })[]
+  currentPage: number
+  transactionsCount: number
+  tradesCount: number
+  pageSize: number
 }
 
-export function HistoryTabs({ transactions, trades }: HistoryTabsProps) {
+export function HistoryTabs({ 
+  transactions, 
+  trades,
+  currentPage,
+  transactionsCount,
+  tradesCount,
+  pageSize
+}: HistoryTabsProps) {
   const [activeTab, setActiveTab] = useState("transactions")
 
   const getStatusColor = (status: string) => {
@@ -44,6 +57,9 @@ export function HistoryTabs({ transactions, trades }: HistoryTabsProps) {
     }
   }
 
+  const transactionsPages = Math.ceil(transactionsCount / pageSize)
+  const tradesPages = Math.ceil(tradesCount / pageSize)
+
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full max-w-md grid-cols-2 bg-black/20">
@@ -55,10 +71,10 @@ export function HistoryTabs({ transactions, trades }: HistoryTabsProps) {
         <GlassCard className="p-6">
           {transactions.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
-              <p>No transactions yet</p>
-              <p className="text-sm mt-2">Your deposits and withdrawals will appear here</p>
+              <p>No transactions found</p>
             </div>
           ) : (
+            <>
             <DataTable
               data={transactions}
               columns={[
@@ -123,6 +139,8 @@ export function HistoryTabs({ transactions, trades }: HistoryTabsProps) {
                 },
               ]}
             />
+            <PaginationControls totalPages={transactionsPages} currentPage={currentPage} />
+            </>
           )}
         </GlassCard>
       </TabsContent>
@@ -131,10 +149,10 @@ export function HistoryTabs({ transactions, trades }: HistoryTabsProps) {
         <GlassCard className="p-6">
           {trades.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
-              <p>No trades yet</p>
-              <p className="text-sm mt-2">Start trading to see your history here</p>
+              <p>No trades found</p>
             </div>
           ) : (
+            <>
             <DataTable
               data={trades}
               columns={[
@@ -217,6 +235,8 @@ export function HistoryTabs({ transactions, trades }: HistoryTabsProps) {
                 },
               ]}
             />
+            <PaginationControls totalPages={tradesPages} currentPage={currentPage} />
+            </>
           )}
         </GlassCard>
       </TabsContent>

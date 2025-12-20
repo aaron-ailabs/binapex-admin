@@ -21,6 +21,7 @@ export interface Profile {
   total_trade_volume: number
   kyc_verified: boolean
   phone: string | null
+  avatar_url: string | null
   credit_score: number | null
   credit_score_updated_at: string | null
   role?: string // admin or user

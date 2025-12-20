@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import type { Profile } from "@/lib/types/database"
+import { AvatarUpload } from "@/components/settings/avatar-upload"
 
 interface SettingsFormsProps {
   user: User
@@ -84,9 +85,22 @@ export function SettingsForms({ user, profile }: SettingsFormsProps) {
 
   return (
     <div className="space-y-6">
+
+
+// ... inside component ...
+
       {/* Profile Information */}
       <GlassCard className="p-6">
-        <h3 className="text-xl font-bold mb-4">Profile Information</h3>
+        <h3 className="text-xl font-bold mb-6">Profile Information</h3>
+        
+        <div className="mb-8 flex justify-center">
+            <AvatarUpload 
+                userId={user.id} 
+                avatarUrl={profile?.avatar_url || null} 
+                fullName={profile?.full_name || ""} 
+            />
+        </div>
+
         <div className="space-y-4">
           <div>
             <Label className="text-gray-400 mb-2">Email</Label>

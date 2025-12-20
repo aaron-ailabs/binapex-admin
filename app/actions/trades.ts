@@ -6,7 +6,7 @@ import { Database } from '@/types/supabase';
 export type Trade = Database['public']['Tables']['orders']['Row'];
 
 export async function getActiveTrades(): Promise<{ data: Trade[] | null; error: string | null }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
@@ -29,7 +29,7 @@ export async function getActiveTrades(): Promise<{ data: Trade[] | null; error: 
 }
 
 export async function getTradeHistory(): Promise<{ data: Trade[] | null; error: string | null }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {

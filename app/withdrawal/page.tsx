@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { WithdrawalForm } from "@/components/banking/withdrawal-form"
+import { PendingWithdrawals } from "@/components/banking/pending-withdrawals"
 import { GlassCard } from "@/components/ui/glass-card"
 import { AlertCircle } from "lucide-react"
 
@@ -17,6 +18,15 @@ export default async function WithdrawalPage() {
   }
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+
+  // Fetch pending withdrawals
+  const { data: pendingWithdrawals } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("type", "withdrawal")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
 
   const { data: userBanks } = await supabase.from("user_bank_accounts").select("*").eq("user_id", user.id)
 
@@ -34,14 +44,19 @@ export default async function WithdrawalPage() {
             <div className="text-sm space-y-1">
               <p className="font-medium text-[#F59E0B]">Important Withdrawal Information</p>
               <ul className="text-gray-300 space-y-1 list-disc list-inside">
-                <li>Withdrawals are processed within 1-3 business days</li>
+                <li>Withdrawals are typically processed within 24 hours</li>
                 <li>Bank account must be in your registered name</li>
-                <li>Minimum withdrawal: $100 USD equivalent</li>
+                <li>Minimum withdrawal: $50 USD equivalent</li>
                 <li>You cannot withdraw funds with active open positions</li>
               </ul>
             </div>
           </div>
         </GlassCard>
+
+        {/* Pending Withdrawals Section */}
+        {pendingWithdrawals && pendingWithdrawals.length > 0 && (
+          <PendingWithdrawals transactions={pendingWithdrawals} />
+        )}
 
         <WithdrawalForm
           userBanks={userBanks || []}
