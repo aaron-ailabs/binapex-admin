@@ -27,7 +27,7 @@ export function AdminDashboard({ initialStats, recentDeposits, recentTickets }: 
     pendingDeposits: stats.pendingDeposits || initialStats.pendingDeposits,
     openTickets: stats.openTickets || initialStats.openTickets,
     activeUsers: stats.activeUsers || initialStats.activeUsers,
-    openTrades: initialStats.openTrades,
+    openTrades: stats.openTrades || initialStats.openTrades,
   }
 
   return (

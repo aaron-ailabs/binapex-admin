@@ -28,6 +28,17 @@ export default async function WithdrawalPage() {
     .eq("status", "pending")
     .order("created_at", { ascending: false })
 
+  const { data: wallet } = await supabase
+    .from("wallets")
+    .select("balance, locked_balance")
+    .eq("user_id", user.id)
+    .single()
+
+  const totalBalance = Number(wallet?.balance ?? profile?.balance_usd ?? 0)
+  const lockedBalance = Number(wallet?.locked_balance ?? 0)
+  const bonusBalance = Number(profile?.bonus_balance ?? 0)
+  const availableBalance = Math.max(0, totalBalance - lockedBalance - bonusBalance)
+
   const { data: userBanks } = await supabase.from("user_bank_accounts").select("*").eq("user_id", user.id)
 
   return (
@@ -61,8 +72,10 @@ export default async function WithdrawalPage() {
         <WithdrawalForm
           userBanks={userBanks || []}
           userId={user.id}
-          currentBalance={profile?.balance_usd || 0}
-          bonusBalance={profile?.bonus_balance || 0}
+          currentBalance={availableBalance} // Calculated Available
+          totalBalance={totalBalance}       // For display
+          lockedBalance={lockedBalance}     // For display
+          bonusBalance={bonusBalance}
         />
       </div>
     </DashboardLayout>

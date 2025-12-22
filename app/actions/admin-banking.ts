@@ -87,3 +87,9 @@ export async function deletePlatformBankAccount(id: string) {
     revalidatePath("/deposit")
     return { success: true }
   }
+
+export async function revalidateBanks() {
+    revalidatePath("/admin/finance")
+    revalidatePath("/deposit")
+    return { success: true }
+  }

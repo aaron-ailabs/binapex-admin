@@ -22,7 +22,7 @@ export default async function AdminPage() {
       .order("created_at", { ascending: false })
       .limit(5),
     supabase.from("profiles").select("id", { count: "exact", head: true }),
-    supabase.from("limit_orders").select("id", { count: "exact", head: true }).eq("status", "open"),
+    supabase.from("trades").select("id", { count: "exact", head: true }).eq("status", "open"),
   ])
 
   const initialStats = {

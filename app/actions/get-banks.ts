@@ -10,6 +10,7 @@ export async function getPlatformBankAccounts(): Promise<PlatformBankAccount[]> 
     .from("platform_bank_accounts")
     .select("*")
     .eq("is_active", true)
+    .order("display_order", { ascending: true })
 
   if (error) {
     console.error("Error fetching platform bank accounts:", error)

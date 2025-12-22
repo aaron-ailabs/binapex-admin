@@ -1,30 +1,33 @@
-import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { TradingInterface } from "@/components/trading/trading-interface"
+import { BinaryOptionsInterface } from "@/components/trading/binary-options-interface"
+import { redirect } from "next/navigation"
 
 export default async function TradePage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-  if (error || !user) {
-    redirect("/login")
-  }
+    if (!user) {
+        redirect('/auth/login')
+    }
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+    // Fetch initial balance server-side for immediate display
+    let initialBalance = 0;
+    const { data: wallets } = await supabase
+        .from('wallets')
+        .select('balance, locked_balance, asset')
+        .eq('user_id', user.id)
 
-  const { data: tradingPairs } = await supabase
-    .from("trading_pairs")
-    .select("*")
-    .eq("is_active", true)
-    .order("asset_type, symbol")
+    if (wallets) {
+        wallets.forEach(w => {
+            if (w.asset === 'USD' || w.asset === 'USDT') {
+                initialBalance += Number(w.balance) - Number(w.locked_balance || 0)
+            }
+        })
+    }
 
-  return (
-    <DashboardLayout>
-      <TradingInterface />
-    </DashboardLayout>
-  )
+    return (
+        <main className="min-h-screen bg-black text-white pb-20 md:pb-0">
+             <BinaryOptionsInterface initialBalance={initialBalance} />
+        </main>
+    )
 }

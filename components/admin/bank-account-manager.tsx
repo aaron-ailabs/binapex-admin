@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useLiveData } from "@/hooks/use-live-data"
+import { revalidateBanks } from "@/app/actions/admin-banking"
 
 interface BankAccountManagerProps {
   accounts: any[]
@@ -21,7 +22,7 @@ interface BankAccountManagerProps {
 export function BankAccountManager({ accounts: initialAccounts }: BankAccountManagerProps) {
   const router = useRouter()
   const supabase = createClient()
-  const accounts = useLiveData("platform_banks", initialAccounts, { column: "display_order", ascending: true })
+  const accounts = useLiveData("platform_bank_accounts", initialAccounts, { column: "display_order", ascending: true })
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -80,13 +81,13 @@ export function BankAccountManager({ accounts: initialAccounts }: BankAccountMan
         const updateData: any = { ...formData }
         if (qrCodeUrl) updateData.qr_code_url = qrCodeUrl
 
-        const { error } = await supabase.from("platform_banks").update(updateData).eq("id", editingId)
+        const { error } = await supabase.from("platform_bank_accounts").update(updateData).eq("id", editingId)
 
         if (error) throw error
         toast.success("Bank account updated")
       } else {
         // Create new
-        const { error } = await supabase.from("platform_banks").insert({
+        const { error } = await supabase.from("platform_bank_accounts").insert({
           ...formData,
           qr_code_url: qrCodeUrl,
           display_order: accounts.length,
@@ -106,6 +107,7 @@ export function BankAccountManager({ accounts: initialAccounts }: BankAccountMan
       setQrFile(null)
       setIsAdding(false)
       setEditingId(null)
+      await revalidateBanks()
       router.refresh()
     } catch (error: any) {
       toast.error(error.message || "Failed to save bank account")
@@ -129,10 +131,11 @@ export function BankAccountManager({ accounts: initialAccounts }: BankAccountMan
     if (!confirm("Are you sure you want to delete this bank account?")) return
 
     try {
-      const { error } = await supabase.from("platform_banks").delete().eq("id", accountId)
+      const { error } = await supabase.from("platform_bank_accounts").delete().eq("id", accountId)
 
       if (error) throw error
       toast.success("Bank account deleted")
+      await revalidateBanks()
       router.refresh()
     } catch (error: any) {
       toast.error(error.message || "Failed to delete bank account")
@@ -141,10 +144,11 @@ export function BankAccountManager({ accounts: initialAccounts }: BankAccountMan
 
   const toggleActive = async (accountId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase.from("platform_banks").update({ is_active: !currentStatus }).eq("id", accountId)
+      const { error } = await supabase.from("platform_bank_accounts").update({ is_active: !currentStatus }).eq("id", accountId)
 
       if (error) throw error
       toast.success(`Account ${!currentStatus ? "activated" : "deactivated"}`)
+      await revalidateBanks()
       router.refresh()
     } catch (error: any) {
       toast.error(error.message || "Failed to update account status")

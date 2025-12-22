@@ -9,6 +9,7 @@ interface LiveStats {
   pendingDeposits: number
   openTickets: number
   activeUsers: number
+  openTrades: number
 }
 
 export function useAdminRealtime() {
@@ -16,6 +17,7 @@ export function useAdminRealtime() {
     pendingDeposits: 0,
     openTickets: 0,
     activeUsers: 0,
+    openTrades: 0,
   })
   const [isConnected, setIsConnected] = useState(false)
 
@@ -26,7 +28,7 @@ export function useAdminRealtime() {
     const setupRealtime = async () => {
       // Fetch initial stats
       const fetchStats = async () => {
-        const [depositsResult, ticketsResult, usersResult] = await Promise.all([
+        const [depositsResult, ticketsResult, usersResult, tradesResult] = await Promise.all([
           supabase
             .from("transactions")
             .select("id", { count: "exact", head: true })
@@ -34,12 +36,14 @@ export function useAdminRealtime() {
             .eq("status", "pending"),
           supabase.from("tickets").select("id", { count: "exact", head: true }).eq("status", "open"),
           supabase.from("profiles").select("id", { count: "exact", head: true }),
+          supabase.from("trades").select("id", { count: "exact", head: true }).eq("status", "open"),
         ])
 
         setStats({
           pendingDeposits: depositsResult.count || 0,
           openTickets: ticketsResult.count || 0,
           activeUsers: usersResult.count || 0,
+          openTrades: tradesResult.count || 0,
         })
       }
 
@@ -107,6 +111,35 @@ export function useAdminRealtime() {
                 ...prev,
                 openTickets: Math.max(0, prev.openTickets - 1),
               }))
+            }
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "trades",
+          },
+          (payload: any) => {
+             if (payload.new.status === 'open') {
+                setStats((prev) => ({ ...prev, openTrades: prev.openTrades + 1 }))
+             }
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "trades",
+          },
+           (payload: any) => {
+            if (payload.old.status === "open" && payload.new.status !== "open") {
+               setStats((prev) => ({ ...prev, openTrades: Math.max(0, prev.openTrades - 1) }))
+            } 
+            else if (payload.old.status !== "open" && payload.new.status === "open") {
+               setStats((prev) => ({ ...prev, openTrades: prev.openTrades + 1 }))
             }
           },
         )

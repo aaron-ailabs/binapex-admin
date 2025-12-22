@@ -15,11 +15,20 @@ import { submitWithdrawal, addUserBankAccount, deleteUserBankAccount } from "@/a
 interface WithdrawalFormProps {
   userBanks: UserBankAccount[]
   userId: string
-  currentBalance: number
+  currentBalance: number  // This is the calculated "Available Balance"
   bonusBalance: number
+  totalBalance: number
+  lockedBalance: number
 }
 
-export function WithdrawalForm({ userBanks, userId, currentBalance, bonusBalance }: WithdrawalFormProps) {
+export function WithdrawalForm({ 
+  userBanks, 
+  userId, 
+  currentBalance, 
+  bonusBalance,
+  totalBalance,
+  lockedBalance 
+}: WithdrawalFormProps) {
   const router = useRouter()
   const supabase = createClient()
   const [selectedBank, setSelectedBank] = useState<UserBankAccount | null>(userBanks[0] || null)
@@ -147,14 +156,30 @@ export function WithdrawalForm({ userBanks, userId, currentBalance, bonusBalance
   return (
     <div className="space-y-6">
       {/* Balance Display */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Balance Display */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Total Balance */}
         <GlassCard className="p-6">
-          <p className="text-sm text-gray-400 mb-2">Available Balance</p>
-          <p className="text-3xl font-mono font-bold text-white">${currentBalance.toFixed(2)}</p>
+          <p className="text-sm text-gray-400 mb-2">Total Equity</p>
+          <p className="text-2xl font-mono font-bold text-white">${totalBalance.toFixed(2)}</p>
         </GlassCard>
-        <GlassCard className="p-6 bg-[#F59E0B]/5">
-          <p className="text-sm text-gray-400 mb-2">Bonus Balance (Not Withdrawable)</p>
-          <p className="text-3xl font-mono font-bold text-[#F59E0B]">${bonusBalance.toFixed(2)}</p>
+
+        {/* Locked Balance */}
+        <GlassCard className="p-6 bg-red-500/5 border-red-500/20">
+          <p className="text-sm text-gray-400 mb-2">Locked (Active Trades)</p>
+          <p className="text-2xl font-mono font-bold text-red-400">${lockedBalance.toFixed(2)}</p>
+        </GlassCard>
+
+        {/* Bonus Balance */}
+        <GlassCard className="p-6 bg-[#F59E0B]/5 border-[#F59E0B]/20">
+          <p className="text-sm text-gray-400 mb-2">Bonus (Locked)</p>
+          <p className="text-2xl font-mono font-bold text-[#F59E0B]">${bonusBalance.toFixed(2)}</p>
+        </GlassCard>
+
+        {/* Available Balance */}
+        <GlassCard className="p-6 bg-emerald-500/5 border-emerald-500/20">
+          <p className="text-sm text-gray-400 mb-2">Available to Withdraw</p>
+          <p className="text-2xl font-mono font-bold text-emerald-400">${currentBalance.toFixed(2)}</p>
         </GlassCard>
       </div>
 

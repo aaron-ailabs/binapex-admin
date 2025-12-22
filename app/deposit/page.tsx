@@ -18,7 +18,7 @@ export default async function DepositPage() {
     redirect("/login")
   }
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  const { data: wallet } = await supabase.from("wallets").select("balance").eq("user_id", user.id).eq("asset", "USD").single()
 
   const banks = await getPlatformBankAccounts()
 
@@ -50,7 +50,7 @@ export default async function DepositPage() {
         <DepositForm 
           banks={banks || []} 
           userId={user.id} 
-          currentBalance={profile?.balance_usd || 0} 
+          currentBalance={wallet?.balance || 0} 
           exchangeRate={rate}
         />
       </div>

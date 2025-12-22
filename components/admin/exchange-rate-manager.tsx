@@ -61,7 +61,7 @@ export function ExchangeRateManager({ initialRate, lastUpdated }: ExchangeRateMa
 
       <div className="flex items-end gap-4">
         <div className="flex-1 space-y-2">
-          <Label htmlFor="rate" className="text-gray-400">Current Rate (1 USD = ? MYR)</Label>
+          <Label htmlFor="rate" className="text-gray-400">Current Rate (1 USD = MYR)</Label>
           <Input
             id="rate"
             type="number"

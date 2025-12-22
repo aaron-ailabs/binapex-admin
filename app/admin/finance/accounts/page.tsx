@@ -7,7 +7,7 @@ export default async function AdminBankAccountsPage() {
   const supabase = await createClient()
 
   const { data: bankAccounts } = await supabase
-    .from("platform_banks")
+    .from("platform_bank_accounts")
     .select("*")
     .order("display_order", { ascending: true })
 
