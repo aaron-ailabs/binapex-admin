@@ -47,19 +47,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Fetch profile with wallets join to get real USD balance
+      // Fetch profile with specific wallet selection
       const { data: profile } = await supabase
         .from("profiles")
-        .select("*, wallets(balance)")
+        .select("bonus_balance, balance_usd, wallets(balance, asset)")
         .eq("id", user.id)
         .single()
       
-      // Use wallets[0].balance if available, else fallback to profile.balance_usd
       if (profile) {
-        // @ts-ignore - Supabase types might verify specific join syntax
-        const walletBalance = profile.wallets?.[0]?.balance
-        // Use wallet balance if it exists (source of truth), otherwise profile cache
-        setBalance(walletBalance !== undefined ? walletBalance : profile.balance_usd)
+        // Find USD wallet specifically, handling array or single response structure
+        // The join returns an array
+        const wallets = profile.wallets as { asset: string; balance: number }[] | null
+        const usdWallet = wallets?.find((w) => w.asset === "USD")
+        
+        const walletBal = usdWallet?.balance ?? profile.balance_usd ?? 0
+        const bonusBal = profile.bonus_balance ?? 0
+        
+        // Total Balance = USD Wallet + Bonus
+        setBalance(walletBal + bonusBal)
       }
     }
 

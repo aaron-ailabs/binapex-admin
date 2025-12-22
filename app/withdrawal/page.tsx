@@ -32,12 +32,13 @@ export default async function WithdrawalPage() {
     .from("wallets")
     .select("balance, locked_balance")
     .eq("user_id", user.id)
+    .eq("asset", "USD")
     .single()
 
   const totalBalance = Number(wallet?.balance ?? profile?.balance_usd ?? 0)
   const lockedBalance = Number(wallet?.locked_balance ?? 0)
   const bonusBalance = Number(profile?.bonus_balance ?? 0)
-  const availableBalance = Math.max(0, totalBalance - lockedBalance - bonusBalance)
+  const availableBalance = Math.max(0, totalBalance + bonusBalance - lockedBalance)
 
   const { data: userBanks } = await supabase.from("user_bank_accounts").select("*").eq("user_id", user.id)
 
@@ -57,7 +58,7 @@ export default async function WithdrawalPage() {
               <ul className="text-gray-300 space-y-1 list-disc list-inside">
                 <li>Withdrawals are typically processed within 24 hours</li>
                 <li>Bank account must be in your registered name</li>
-                <li>Minimum withdrawal: $50 USD equivalent</li>
+                <li>Minimum withdrawal: $100 USD equivalent</li>
                 <li>You cannot withdraw funds with active open positions</li>
               </ul>
             </div>

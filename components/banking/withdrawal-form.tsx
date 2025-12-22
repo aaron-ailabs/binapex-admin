@@ -78,9 +78,9 @@ export function WithdrawalForm({
       setNewBank({ bank_name: "", account_name: "", account_number: "" })
       setIsAddingBank(false)
       // router.refresh() is handled in action
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Add bank error:", error)
-      toast.error(error.message || "Failed to add bank account")
+      toast.error(error instanceof Error ? error.message : "Failed to add bank account")
     }
   }
 
@@ -93,9 +93,9 @@ export function WithdrawalForm({
       toast.success("Bank account removed")
       if (selectedBank?.id === bankId) setSelectedBank(null)
       // router.refresh() is handled in action
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Delete bank error:", error)
-      toast.error(error.message || "Failed to remove bank account")
+      toast.error(error instanceof Error ? error.message : "Failed to remove bank account")
     }
   }
 
@@ -143,11 +143,15 @@ export function WithdrawalForm({
       if (result.error) throw new Error(result.error)
 
       toast.success("Withdrawal request submitted successfully! Our team will process it shortly.")
+      
+      // Force balance update
+      window.dispatchEvent(new Event("wallet_update"))
+      
       setAmount("")
       router.push("/history")
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Withdrawal error:", error)
-      toast.error(error.message || "Failed to submit withdrawal")
+      toast.error(error instanceof Error ? error.message : "Failed to submit withdrawal")
     } finally {
       setIsSubmitting(false)
     }

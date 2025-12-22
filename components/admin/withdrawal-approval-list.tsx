@@ -14,17 +14,18 @@ interface Withdrawal {
   user_id: string
   amount: number
   status: string
-  payment_method: string
+  type: string
   created_at: string
-  receipt_url: string | null
+  metadata: {
+    bank_name?: string
+    account_name?: string
+    account_number?: string
+    payment_method?: string
+    [key: string]: unknown
+  }
   profiles: {
     full_name: string
     email: string
-  }
-  user_bank_accounts: {
-    bank_name: string
-    account_name: string
-    account_number: string
   }
 }
 
@@ -60,13 +61,14 @@ export function WithdrawalApprovalList() {
   }, [])
 
   const fetchWithdrawals = async () => {
+    // Note: We remove user_bank_accounts!inner join because 'transactions' stores bank info in 'metadata' column
+    // and might not have a direct foreign key to 'user_bank_accounts' table in the current schema.
     const { data, error } = await supabase
       .from("transactions")
       .select(
         `
         *,
-        profiles!inner(full_name, email),
-        user_bank_accounts!inner(bank_name, account_name, account_number)
+        profiles!inner(full_name, email)
       `,
       )
       .eq("type", "withdrawal")
@@ -188,7 +190,12 @@ export function WithdrawalApprovalList() {
                     </td>
                   </tr>
                 ) : (
-                  withdrawals.map((withdrawal) => (
+                  withdrawals.map((withdrawal) => {
+                    // Extract bank info from metadata
+                    const bankName = withdrawal.metadata?.bank_name || "Unknown Bank"
+                    const accountNumber = withdrawal.metadata?.account_number || "N/A"
+                    
+                    return (
                     <tr key={withdrawal.id} className="border-b border-border hover:bg-muted/50">
                       <td className="p-4 whitespace-nowrap">
                         <div>
@@ -198,12 +205,13 @@ export function WithdrawalApprovalList() {
                       </td>
                       <td className="p-4 whitespace-nowrap">
                         <div className="font-bold text-foreground">${withdrawal.amount.toFixed(2)}</div>
-                        <div className="text-sm text-muted-foreground">{withdrawal.payment_method}</div>
+                        {/* Only show payment method if it exists, otherwise hide or default */}
+                         <div className="text-sm text-muted-foreground">{withdrawal.metadata?.payment_method || "Bank Transfer"}</div>
                       </td>
                       <td className="p-4 whitespace-nowrap">
-                        <div className="text-sm text-foreground">{withdrawal.user_bank_accounts.bank_name}</div>
+                        <div className="text-sm text-foreground">{bankName}</div>
                         <div className="text-sm text-muted-foreground">
-                          {withdrawal.user_bank_accounts.account_number}
+                          {accountNumber}
                         </div>
                       </td>
                       <td className="p-4 whitespace-nowrap">
@@ -261,7 +269,7 @@ export function WithdrawalApprovalList() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                  )})
                 )}
               </tbody>
             </table>
@@ -310,12 +318,12 @@ export function WithdrawalApprovalList() {
                 <div className="col-span-2">
                   <label className="text-sm text-muted-foreground">Bank Account</label>
                   <div className="mt-1 p-3 bg-background rounded-lg border border-border">
-                    <p className="font-medium text-foreground">{selectedWithdrawal.user_bank_accounts.bank_name}</p>
+                    <p className="font-medium text-foreground">{selectedWithdrawal.metadata?.bank_name || "Unknown Bank"}</p>
                     <p className="text-sm text-muted-foreground">
-                      {selectedWithdrawal.user_bank_accounts.account_name}
+                      {selectedWithdrawal.metadata?.account_name || "Unknown A/C Name"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {selectedWithdrawal.user_bank_accounts.account_number}
+                      {selectedWithdrawal.metadata?.account_number || "Unknown A/C Number"}
                     </p>
                   </div>
                 </div>
