@@ -14,7 +14,9 @@ export function SupportWidget() {
       {/* Chat Window Container */}
       <div
         className={cn(
-          "fixed bottom-24 right-6 z-50 w-[350px] h-[500px] transition-all duration-300 ease-in-out origin-bottom-right shadow-2xl rounded-2xl overflow-hidden",
+          "fixed z-50 transition-all duration-300 ease-in-out shadow-2xl overflow-hidden",
+          "bottom-0 right-0 w-full h-[100dvh] rounded-none", // Mobile styles
+          "md:bottom-24 md:right-6 md:w-[350px] md:h-[500px] md:origin-bottom-right md:rounded-2xl", // Desktop styles
           isOpen
             ? "translate-y-0 opacity-100 scale-100 pointer-events-auto"
             : "translate-y-4 opacity-0 scale-95 pointer-events-none"

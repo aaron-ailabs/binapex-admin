@@ -98,7 +98,7 @@ export function OrderForm({ symbol = 'BTC-USD', currentPrice = 0, onSuccess }: {
       }
 
       // Call API
-      const response = await fetch('/api/trade/execute', {
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

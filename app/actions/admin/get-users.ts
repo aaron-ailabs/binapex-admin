@@ -20,19 +20,24 @@ export interface AdminUser {
 export async function getAdminUsersList(): Promise<AdminUser[]> {
   noStore() // Disable caching to ensure fresh data
 
-  // Create ADMIN Client (Bypasses RLS) to access Auth and all Tables
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  )
-
   try {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("SUPABASE_SERVICE_ROLE_KEY is missing")
+      return []
+    }
+
+    // Create ADMIN Client (Bypasses RLS) to access Auth and all Tables
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+
     // 1. Fetch Key Data: Profiles + Wallets
     // "wallets" is joined via the user_id FK. 
     // We fetch all wallets to calculate the true live balance.

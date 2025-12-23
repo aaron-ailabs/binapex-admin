@@ -74,7 +74,7 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
     }
   }
 
-  const handleCreditScoreUpdate = async (score: number, reason: string) => {
+  const handleCreditScoreUpdate = async (score: number, reason?: string) => {
     try {
       const { data: currentUser } = await supabase.auth.getUser()
       if (!currentUser.user) throw new Error("Not authenticated")

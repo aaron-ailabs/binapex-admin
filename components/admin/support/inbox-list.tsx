@@ -67,13 +67,13 @@ export function InboxList({ onSelectUser, selectedUserId }: InboxListProps) {
   }, [])
 
   return (
-    <div className="flex h-full w-full flex-col border-r border-zinc-800 bg-zinc-900">
+    <div className="flex h-full w-full flex-col border-r border-zinc-800 bg-zinc-900 min-h-0">
       <div className="p-4 border-b border-zinc-800">
         <h2 className="text-xl font-semibold text-white">Inbox</h2>
         <p className="text-zinc-400 text-xs">Active Conversations</p>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 overflow-hidden">
         {isLoading ? (
             <div className="flex flex-col gap-2 p-4">
                 {[...Array(5)].map((_, i) => (

@@ -121,10 +121,12 @@ export function ExecutionWidget({ symbol, currentPrice, payoutRate, balance, onS
                     ))}
                 </div>
                 
+                {/* Hidden per user request 
                 <div className="flex justify-between items-center bg-white/5 p-2 rounded border border-white/5 border-dashed">
                      <span className="text-xs text-gray-500">Potential Payout</span>
                      <span className="text-emerald-400 font-mono font-bold text-lg">${potentialPayout}</span>
                 </div>
+                */}
             </div>
 
             {/* Step 3: Buttons */}

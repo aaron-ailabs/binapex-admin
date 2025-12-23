@@ -29,7 +29,7 @@ export function CreditScoreCard({ creditScore, creditScoreUpdatedAt }: CreditSco
         <div className="flex items-end gap-4">
           <div>
             <div className="text-4xl font-bold text-white">{creditScore !== null ? creditScore : "—"}</div>
-            {creditScore !== null && <div className="text-xs text-gray-400 mt-1">out of 1000</div>}
+            {creditScore !== null && <div className="text-xs text-gray-400 mt-1">out of 100</div>}
           </div>
           <Badge variant="outline" className={`${badge.color} mb-1`}>
             {badge.label}

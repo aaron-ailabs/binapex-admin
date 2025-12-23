@@ -34,64 +34,63 @@ export async function POST(request: NextRequest) {
     userId = user.id
     body = await request.json()
 
-    // allow 'symbol' or 'asset_id' for backward compatibility, but prefer symbol for pair lookup
-    const { symbol, asset_id, order_type, price, quantity, type = 'limit' } = body
+    // 1. Normalize Inputs
+    // support both camelCase and snake_case for maximum compatibility during transition
+    const symbol = body.symbol || body.pair
+    const side = (body.order_type || body.side || '').toLowerCase()
+    const type = (body.type || 'limit').toLowerCase()
+    const quantity = parseFloat(body.quantity || body.amount || '0')
+    const price = parseFloat(body.price || '0')
 
-    if (!order_type || !quantity) {
-        return Response.json({ error: "Missing required fields" }, { status: 400 })
+    if (!symbol || !side || !quantity) {
+        return Response.json({ error: "Missing required fields (symbol, side, quantity)" }, { status: 400 })
+    }
+
+    if (!['buy', 'sell'].includes(side)) {
+        return Response.json({ error: "Invalid side. Must be 'buy' or 'sell'" }, { status: 400 })
+    }
+
+    if (!['limit', 'market', 'stop_limit'].includes(type)) {
+        return Response.json({ error: "Invalid order type" }, { status: 400 })
     }
     
-    // Resolve Trading Pair
+    // 2. Resolve Trading Pair
     let tradingPairId: string | null = null;
+    const cleanSymbol = symbol.replace(/[^a-zA-Z0-9]/g, '');
 
-    if (symbol) {
-        // 1. Try exact match (e.g. "BTCUSD" from some sources)
-        const { data: exactPair } = await supabase.from('trading_pairs').select('id').eq('symbol', symbol).single();
-        if (exactPair) {
-            tradingPairId = exactPair.id
-        } else {
-            // 2. Try normalized (remove separators) e.g. "BTC-USD" -> "BTCUSD" (common for Crypto/Forex)
-            const normalized = symbol.replace(/[-/]/g, '');
-            const { data: normPair } = await supabase.from('trading_pairs').select('id').eq('symbol', normalized).single();
-            if (normPair) {
-                tradingPairId = normPair.id
-            } else {
-                // 3. Try base symbol only (e.g. "AAPL-USD" -> "AAPL" for Stocks)
-                const base = symbol.split(/[-/]/)[0];
-                 const { data: basePair } = await supabase.from('trading_pairs').select('id').eq('symbol', base).single();
-                 if (basePair) tradingPairId = basePair.id;
-            }
-        }
-    }
-    
-    // Fallback: if asset_id provided (legacy), try to find pair with base_currency = asset.symbol?
-    // Or just fail if no symbol.
-    if (!tradingPairId) {
-        // Just for robustness, if only asset_id is sent:
-        // This relies on asset_id being UUID of "assets".
-        if (asset_id && !symbol) {
-             const { data: asset } = await supabase.from('assets').select('symbol').eq('id', asset_id).single()
-             if (asset) {
-                 // Assume Pair is ASSET-USD
-                 const pairSymbol = `${asset.symbol}-USD`
-                 const { data: pair } = await supabase.from('trading_pairs').select('id').eq('symbol', pairSymbol).single()
-                 if (pair) tradingPairId = pair.id
-             }
-        }
+    const { data: pair } = await supabase
+        .from('trading_pairs')
+        .select('id, symbol')
+        .or(`symbol.eq.${symbol},symbol.eq.${cleanSymbol}`)
+        .single();
+
+    if (pair) {
+        tradingPairId = pair.id
+    } else {
+        // Fallback search
+        const { data: fallbackPair } = await supabase
+            .from('trading_pairs')
+            .select('id')
+            .ilike('symbol', `%${cleanSymbol}%`)
+            .limit(1)
+            .single();
+        if (fallbackPair) tradingPairId = fallbackPair.id;
     }
 
     if (!tradingPairId) {
-        return Response.json({ error: "Invalid trading pair or symbol" }, { status: 400 })
+        return Response.json({ error: `Invalid trading pair: ${symbol}` }, { status: 400 })
     }
 
-    // Call Atomic RPC
+    // 3. Atomic Order Placement (Spot/Exchange Engine)
+    // We use the `limit_orders` table path for the matching engine
     const { data: rpcResult, error: rpcError } = await supabase.rpc("place_order_atomic", {
       p_user_id: user.id,
       p_trading_pair_id: tradingPairId,
-      p_side: order_type, // 'buy' or 'sell'
-      p_price: price || 0, // Market orders might have 0 price?
+      p_side: side,
+      p_type: type,
+      p_price: price,
       p_amount: quantity,
-      p_type: type.toLowerCase() // 'limit' or 'market'
+      p_trigger_price: body.triggerPrice || null
     })
 
     if (rpcError) {
@@ -104,24 +103,26 @@ export async function POST(request: NextRequest) {
 
     const orderId = rpcResult.order_id
 
-    // Trigger Matching Engine (Run async? Or await?)
-    // Await for immediate feedback is better for UX.
+    // 4. Trigger Matching Engine
+    // We always trigger the engine for both Limit and Market orders
+    // Market orders will execute immediately against best resting orders
     const engine = new OrderMatchingEngine(supabase)
     const matchingResult = await engine.matchOrders(tradingPairId)
 
     return Response.json({
       success: true,
       order_id: orderId,
+      status: matchingResult.executed_trades.length > 0 ? 'PARTIAL_OR_FILLED' : 'OPEN',
       matching_result: matchingResult,
     })
   } catch (error) {
     captureApiError(error, {
       userId,
       endpoint: "/api/orders",
-      action: "create-order",
+      action: "unified-create-order",
       metadata: { body: body || {} },
     })
 
-    return Response.json({ error: error instanceof Error ? error.message : "Order creation failed" }, { status: 400 })
+    return Response.json({ error: error instanceof Error ? error.message : "Order implementation error" }, { status: 400 })
   }
 }

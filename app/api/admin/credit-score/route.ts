@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     const { userId, score, reason } = await request.json()
 
-    if (!userId || score === undefined || !reason) {
+    if (!userId || score === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update credit score
-    const historyRecord = await CreditScoreService.updateCreditScore(userId, score, reason, user.id)
+    const historyRecord = await CreditScoreService.updateCreditScore(userId, score, user.id, reason)
 
     return NextResponse.json(
       {

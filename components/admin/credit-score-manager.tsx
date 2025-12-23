@@ -12,12 +12,11 @@ import type { Profile, CreditScoreHistory } from "@/lib/types/database"
 interface CreditScoreManagerProps {
   user: Profile
   creditHistory: CreditScoreHistory[]
-  onUpdate: (score: number, reason: string) => Promise<void>
+  onUpdate: (score: number, reason?: string) => Promise<void>
 }
 
 export function CreditScoreManager({ user, creditHistory, onUpdate }: CreditScoreManagerProps) {
   const [newScore, setNewScore] = useState(user.credit_score?.toString() || "")
-  const [reason, setReason] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -33,17 +32,11 @@ export function CreditScoreManager({ user, creditHistory, onUpdate }: CreditScor
       return
     }
 
-    if (!reason.trim()) {
-      setError("Please provide a reason for the update")
-      return
-    }
-
     setIsLoading(true)
     setError("")
 
     try {
-      await onUpdate(score, reason)
-      setReason("")
+      await onUpdate(score)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update credit score")
     } finally {
@@ -92,15 +85,7 @@ export function CreditScoreManager({ user, creditHistory, onUpdate }: CreditScor
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-gray-300 block mb-2">Reason</label>
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g., Good trading discipline, multiple wins, risk management"
-              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#F59E0B]/50 resize-none h-24"
-            />
-          </div>
+
 
           {error && (
             <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex gap-2">
@@ -111,7 +96,7 @@ export function CreditScoreManager({ user, creditHistory, onUpdate }: CreditScor
 
           <Button
             onClick={handleUpdate}
-            disabled={isLoading || !newScore || !reason}
+            disabled={isLoading || !newScore}
             className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:from-[#D97706] hover:to-[#B45309] text-black font-bold disabled:opacity-50"
           >
             {isLoading ? "Updating..." : "Update Score"}

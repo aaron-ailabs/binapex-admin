@@ -20,7 +20,7 @@ interface CreditScoreEditModalProps {
   onClose: () => void
   currentScore: number | null
   userId: string
-  onUpdate: (score: number, reason: string) => Promise<void>
+  onUpdate: (score: number, reason?: string) => Promise<void>
 }
 
 export function CreditScoreEditModal({
@@ -31,7 +31,6 @@ export function CreditScoreEditModal({
   onUpdate,
 }: CreditScoreEditModalProps) {
   const [score, setScore] = useState(currentScore?.toString() || "100")
-  const [reason, setReason] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const badge = getCreditScoreBadge(Number(score))
@@ -41,11 +40,10 @@ export function CreditScoreEditModal({
     if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
       return
     }
-    if (!reason.trim()) return
 
     setIsSubmitting(true)
     try {
-      await onUpdate(scoreNum, reason)
+      await onUpdate(scoreNum)
       onClose()
     } catch (error) {
       console.error("Failed to update credit score:", error)
@@ -91,16 +89,7 @@ export function CreditScoreEditModal({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="reason">Reason for Update</Label>
-              <Textarea
-                id="reason"
-                placeholder="e.g., Consistent trading activity, high win rate..."
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                className="bg-black/50 border-white/10 min-h-[100px] resize-none"
-              />
-            </div>
+
           </div>
         </div>
 
@@ -115,7 +104,7 @@ export function CreditScoreEditModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || !reason.trim() || Number(score) < 0 || Number(score) > 100}
+            disabled={isSubmitting || Number(score) < 0 || Number(score) > 100}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {isSubmitting ? "Updating..." : "Update Score"}

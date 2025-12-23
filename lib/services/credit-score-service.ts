@@ -24,8 +24,8 @@ export class CreditScoreService {
   static async updateCreditScore(
     userId: string,
     newScore: number,
-    reason: string,
     adminId: string,
+    reason?: string,
   ): Promise<CreditScoreHistory> {
     if (newScore < 0 || newScore > 100) {
       throw new Error("Credit score must be between 0 and 100")
@@ -57,7 +57,7 @@ export class CreditScoreService {
         user_id: userId,
         previous_score: previousScore,
         new_score: newScore,
-        reason,
+        reason: reason || "Manual Update",
         changed_by: adminId,
       })
       .select()

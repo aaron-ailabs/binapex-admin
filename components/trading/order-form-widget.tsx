@@ -82,47 +82,33 @@ export function OrderFormWidget({ symbol = 'BTC-USD', currentPrice = 0, payoutRa
     setIsSubmitting(true);
 
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Please login");
-
         const qty = parseFloat(amountInput);
         const price = parseFloat(priceInput) || currentPrice;
         
-        // Convert to USD Amount for RPC if needed
-        const amountUsd = qty * price;
-
-        if (activeTab === 'MARKET') {
-             // Use RPC
-             const { data, error } = await supabase.rpc('execute_market_order', {
-                 p_user_id: user.id,
-                 p_symbol: symbol.replace(/[^a-zA-Z0-9]/g, ''), // Clean to alphanumeric (e.g. USD/SGD -> USDSGD) to match trading_pairs
-                 p_side: side,
-                 p_quantity: qty, // Live DB expects p_quantity
-                 p_price: price   // Live DB expects p_price
-             });
-             
-             if (error) throw error;
-             
-             // RPC returns JSON, check if it has error inside? usually throws if exception
-             alert("Market Order Executed!");
-        } else {
-            // LIMIT or STOP
-            // Direct Insert
-            const { error } = await supabase.from('orders').insert({
-                user_id: user.id,
-                pair: symbol.replace(/[^a-zA-Z0-9]/g, ''), // Clean to match trading_pairs
+        // Use Unified API endpoint
+        const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                pair: symbol,
                 side: side,
                 type: activeTab,
                 price: price,
-                amount: qty, // Live DB uses 'amount' (Quantity)
-                // fee: ... // Live DB has fee_percentage or fee_rate? 'fee_percentage' numeric, 'fee_rate' numeric.
-                fee_percentage: FEE_RATE, // Using fee_percentage column (Corrected from fee_rate)
-                status: 'OPEN' // Limit orders start as OPEN
-            });
+                amount: qty,
+                triggerPrice: activeTab === 'STOP_LIMIT' ? parseFloat(stopPriceInput) : null,
+                payoutRate: payoutRate // Pass through for binary context if needed by API
+            }),
+        });
 
-            if (error) throw error;
-            alert(`${activeTab} Order Placed!`);
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to place order');
         }
+        
+        alert(`${activeTab} Order ${result.status === 'PARTIAL_OR_FILLED' ? 'Executed' : 'Placed'}!`);
         
         // Reset
         setAmountInput('');

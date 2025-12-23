@@ -107,7 +107,7 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950">
+    <div className="flex h-full flex-col bg-zinc-950 min-h-0">
       {/* Header (Optional, maybe part of parent or simple integrated header) */}
       <div className="flex items-center justify-between border-b border-zinc-900 bg-zinc-950 p-4">
         <div className="flex items-center gap-3">
@@ -120,7 +120,7 @@ export function ChatInterface() {
       </div>
 
       {/* Message List */}
-      <ScrollArea className="flex-1 bg-zinc-950 p-4">
+      <ScrollArea className="flex-1 bg-zinc-950 p-4 overflow-hidden">
          <div className="space-y-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
