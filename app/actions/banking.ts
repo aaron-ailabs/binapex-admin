@@ -11,7 +11,7 @@ const depositSchema = z.object({
 })
 
 const withdrawalSchema = z.object({
-  amount: z.number().min(100).max(1000000),
+  amount: z.number().min(50).max(1000000),
   user_bank_account_id: z.string().uuid(),
 })
 

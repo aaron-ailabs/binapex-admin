@@ -58,7 +58,7 @@ export default async function WithdrawalPage() {
               <ul className="text-gray-300 space-y-1 list-disc list-inside">
                 <li>Withdrawals are typically processed within 24 hours</li>
                 <li>Bank account must be in your registered name</li>
-                <li>Minimum withdrawal: $100 USD equivalent</li>
+                <li>Minimum withdrawal: $50 USD equivalent</li>
                 <li>You cannot withdraw funds with active open positions</li>
               </ul>
             </div>

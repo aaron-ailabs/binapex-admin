@@ -112,8 +112,8 @@ export function WithdrawalForm({
       return
     }
 
-    if (amountNum < 100) {
-      toast.error("Minimum withdrawal is $100")
+    if (amountNum < 50) {
+      toast.error("Minimum withdrawal is $50")
       return
     }
 
@@ -297,8 +297,8 @@ export function WithdrawalForm({
                 <span className="absolute left-3 top-3 text-gray-500 font-mono">$</span>
                 <Input
                   type="number"
-                  placeholder="100.00"
-                  min="100"
+                  placeholder="50.00"
+                  min="50"
                   max={currentBalance}
                   step="0.01"
                   value={amount}
@@ -307,7 +307,7 @@ export function WithdrawalForm({
                   disabled={isSubmitting}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Minimum: $100.00 | Available: ${currentBalance.toFixed(2)}</p>
+              <p className="text-xs text-gray-500 mt-1">Minimum: $50.00 | Available: ${currentBalance.toFixed(2)}</p>
             </div>
 
             <Button

@@ -63,17 +63,36 @@ export async function updateSession(request: NextRequest) {
     }
 
     // 3. Admin Route Protection
-    if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    if (pathname.startsWith("/admin") && pathname !== "/admin/login" && pathname !== "/admin/setup") {
       if (!user) {
         console.log("[Middleware] Admin route accessed without authentication, redirecting to login")
         return redirectTo(request, "/admin/login")
       }
       
-      console.log("[Middleware] Admin route accessed by authenticated user, delegating to AdminRoute")
+      // SEC-03: Implement Edge RBAC check using cache to avoid excessive DB calls
+      const cacheKey = user.id
+      const cachedStatus = adminStatusCache.get(cacheKey)
+      const now = Date.now()
       
-      // Addresses Issue 2: "Authorization bypass potential"
-      // While we delegate the heavy lifting to AdminRoute, we can add a basic check here if role is in metadata
-      // The full check remains in AdminRoute to avoid costly RPC calls here
+      let isAdmin = false
+      
+      if (cachedStatus && (now - cachedStatus.timestamp) < ADMIN_CACHE_DURATION) {
+        isAdmin = cachedStatus.isAdmin
+      } else {
+        // Fetch role from DB
+        const { data: role } = await supabase.rpc("get_user_role")
+        isAdmin = role === "admin"
+        
+        // Update cache
+        adminStatusCache.set(cacheKey, { isAdmin, timestamp: now })
+      }
+      
+      if (!isAdmin) {
+        console.warn("[Middleware] Non-admin user attempted to access admin route:", user.email)
+        return redirectTo(request, "/dashboard")
+      }
+      
+      console.log("[Middleware] Admin access verified at edge for:", user.email)
     }
 
   } catch (error) {

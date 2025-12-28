@@ -60,21 +60,30 @@ export async function POST(request: NextRequest) {
 
     const { data: pair } = await supabase
         .from('trading_pairs')
-        .select('id, symbol')
+        .select('id, symbol, is_active')
         .or(`symbol.eq.${symbol},symbol.eq.${cleanSymbol}`)
         .single();
-
+    
     if (pair) {
+        if (!pair.is_active) {
+            return Response.json({ error: `Trading pair ${symbol} is currently frozen` }, { status: 403 })
+        }
         tradingPairId = pair.id
     } else {
         // Fallback search
         const { data: fallbackPair } = await supabase
             .from('trading_pairs')
-            .select('id')
+            .select('id, is_active')
             .ilike('symbol', `%${cleanSymbol}%`)
             .limit(1)
             .single();
-        if (fallbackPair) tradingPairId = fallbackPair.id;
+        
+        if (fallbackPair) {
+            if (!fallbackPair.is_active) {
+                return Response.json({ error: `Trading pair ${symbol} is currently frozen` }, { status: 403 })
+            }
+            tradingPairId = fallbackPair.id;
+        }
     }
 
     if (!tradingPairId) {
