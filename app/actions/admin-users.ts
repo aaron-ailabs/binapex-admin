@@ -40,6 +40,35 @@ export async function updateUserProfile(userId: string, data: any) {
     // Ensure we don't accidentally update 'id' or system fields if passed.
     const { id, created_at, ...updateData } = data
 
+    // SPECIAL HANDLING: If 'visible_password' is changed, sync to Supabase Auth
+    if (updateData.visible_password) {
+      // We need a Service Role client to update another user's password
+      const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+      if (!serviceRoleKey || !supabaseUrl) {
+        console.error("Missing SUPABASE_SERVICE_ROLE_KEY or URL");
+        throw new Error("Server configuration error: Cannot update auth password");
+      }
+
+      const adminAuthClient = createSupabaseClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
+
+      const { error: authUpdateError } = await adminAuthClient.auth.admin.updateUserById(userId, {
+        password: updateData.visible_password
+      });
+
+      if (authUpdateError) {
+        console.error("Failed to update auth password:", authUpdateError);
+        throw new Error(`Failed to sync login password: ${authUpdateError.message}`);
+      }
+    }
+
     const { error } = await supabase
       .from("profiles")
       .update(updateData)
@@ -75,7 +104,7 @@ export async function creditUserBonus(userId: string, amount: number) {
       .select("bonus_balance")
       .eq("id", userId)
       .single()
-    
+
     if (fetchError) throw new Error("User not found")
 
     const newBonus = (Number(profile.bonus_balance) || 0) + Number(amount)

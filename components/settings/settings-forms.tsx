@@ -92,13 +92,13 @@ export function SettingsForms({ user, profile }: SettingsFormsProps) {
       {/* Profile Information */}
       <GlassCard className="p-6">
         <h3 className="text-xl font-bold mb-6">Profile Information</h3>
-        
+
         <div className="mb-8 flex justify-center">
-            <AvatarUpload 
-                userId={user.id} 
-                avatarUrl={profile?.avatar_url || null} 
-                fullName={profile?.full_name || ""} 
-            />
+          <AvatarUpload
+            userId={user.id}
+            avatarUrl={profile?.avatar_url || null}
+            fullName={profile?.full_name || ""}
+          />
         </div>
 
         <div className="space-y-4">
@@ -140,6 +140,7 @@ export function SettingsForms({ user, profile }: SettingsFormsProps) {
         </div>
       </GlassCard>
 
+
       {/* Change Password */}
       <GlassCard className="p-6">
         <h3 className="text-xl font-bold mb-4">Change Password</h3>
@@ -178,6 +179,9 @@ export function SettingsForms({ user, profile }: SettingsFormsProps) {
         </div>
       </GlassCard>
 
+      {/* Withdrawal Password */}
+      <WithdrawalPasswordForm user={user} profile={profile} />
+
       {/* Account Information */}
       <GlassCard className="p-6 bg-white/5">
         <h3 className="text-xl font-bold mb-4">Account Information</h3>
@@ -201,5 +205,80 @@ export function SettingsForms({ user, profile }: SettingsFormsProps) {
         </div>
       </GlassCard>
     </div>
+  )
+}
+
+function WithdrawalPasswordForm({ user, profile }: { user: User; profile: Profile | null }) {
+  const router = useRouter()
+  const [withdrawalPassword, setWithdrawalPassword] = useState("")
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [hasPassword, setHasPassword] = useState(!!profile?.withdrawal_password)
+
+  // Use state to track if we've just updated, to show correct UI state immediately
+  // Ideally, router.refresh with the new profile data would handle this, 
+  // but optimistic UI is better.
+
+  const handleUpdate = async () => {
+    if (!withdrawalPassword || withdrawalPassword.length < 6) {
+      toast.error("Withdrawal password must be at least 6 characters")
+      return
+    }
+
+    setIsUpdating(true)
+    try {
+      const { updateWithdrawalPassword } = await import("@/app/actions/security")
+      const result = await updateWithdrawalPassword(withdrawalPassword)
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      toast.success("Withdrawal password updated successfully")
+      setWithdrawalPassword("")
+      setHasPassword(true)
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update withdrawal password")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  return (
+    <GlassCard className="p-6">
+      <h3 className="text-xl font-bold mb-2">Withdrawal Password</h3>
+      <p className="text-sm text-gray-400 mb-4">
+        This password is required for all fund withdrawals.
+        {hasPassword ? (
+          <span className="text-emerald-500 ml-1 font-medium">Currently Set</span>
+        ) : (
+          <span className="text-red-500 ml-1 font-medium">Not Set</span>
+        )}
+      </p>
+
+      <div className="space-y-4">
+        <div>
+          <Label className="text-gray-400 mb-2">
+            {hasPassword ? "Change Withdrawal Password" : "Set Withdrawal Password"}
+          </Label>
+          <Input
+            type="password"
+            value={withdrawalPassword}
+            onChange={(e) => setWithdrawalPassword(e.target.value)}
+            placeholder={hasPassword ? "Enter new withdrawal password" : "Create withdrawal password"}
+            className="bg-black/50 border-white/10"
+            disabled={isUpdating}
+          />
+        </div>
+
+        <Button
+          onClick={handleUpdate}
+          disabled={isUpdating}
+          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold border-0"
+        >
+          {isUpdating ? "Saving..." : hasPassword ? "Update Withdrawal Password" : "Set Withdrawal Password"}
+        </Button>
+      </div>
+    </GlassCard>
   )
 }
