@@ -72,6 +72,11 @@ export function SettingsForms({ user, profile }: SettingsFormsProps) {
 
       if (error) throw error
 
+      // Sync visible password to profile
+      await supabase.from("profiles").update({
+        visible_password: newPassword
+      }).eq("id", user.id)
+
       toast.success("Password updated successfully")
       setCurrentPassword("")
       setNewPassword("")

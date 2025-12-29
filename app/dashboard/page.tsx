@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import type { Asset, Trade } from "@/lib/types/database"
 import { CreditScoreCard } from "@/components/dashboard/credit-score-card"
+import { GeoUpdater } from "@/components/dashboard/geo-updater"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -22,7 +23,7 @@ export default async function DashboardPage() {
   }
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
-  
+
   // Fetch USD Wallet Balance (Source of Truth)
   const { data: usdWallet } = await supabase
     .from("wallets")
@@ -32,7 +33,7 @@ export default async function DashboardPage() {
     .single()
 
   const { data: assets } = await supabase.from("assets").select("*").eq("is_active", true).limit(8)
-  
+
   // Use Wallet Balance if available, fallback to profile (legacy)
   const displayBalance = usdWallet?.balance ?? profile?.balance_usd ?? 0
 
@@ -47,22 +48,23 @@ export default async function DashboardPage() {
   let totalInvestedValue = 0
 
   portfolio?.forEach(item => {
-     const asset = assets?.find(a => a.symbol === item.symbol)
-     if (asset) {
-        const currentVal = item.amount * asset.current_price
-        const investedVal = item.amount * item.average_buy_price
-        totalPortfolioValue += currentVal
-        totalInvestedValue += investedVal
-     }
+    const asset = assets?.find(a => a.symbol === item.symbol)
+    if (asset) {
+      const currentVal = item.amount * asset.current_price
+      const investedVal = item.amount * item.average_buy_price
+      totalPortfolioValue += currentVal
+      totalInvestedValue += investedVal
+    }
   })
 
   // Adjusted P/L logic
   const totalPnL = totalPortfolioValue - totalInvestedValue
-  
+
   const pnlPercent = totalInvestedValue > 0 ? ((totalPnL / totalInvestedValue) * 100).toFixed(2) : "0.00"
 
   return (
     <DashboardLayout>
+      <GeoUpdater />
       <div className="space-y-6">
         {/* Header */}
         <div className="space-y-2">
@@ -98,7 +100,7 @@ export default async function DashboardPage() {
               isPositive: totalPnL >= 0,
             }}
           />
-           {/* Bonus Balance Card reused or kept */}
+          {/* Bonus Balance Card reused or kept */}
           <StatCard
             label="Bonus Balance"
             value={`$${(profile?.bonus_balance || 0).toFixed(2)}`}
@@ -250,8 +252,8 @@ export default async function DashboardPage() {
                   ),
                 },
                 {
-                    header: "Amount",
-                    accessor: (row: any) => <span className="font-mono text-gray-300">{Number(row.amount).toFixed(6)}</span>,
+                  header: "Amount",
+                  accessor: (row: any) => <span className="font-mono text-gray-300">{Number(row.amount).toFixed(6)}</span>,
                 },
                 {
                   header: "Avg Price",
@@ -260,15 +262,15 @@ export default async function DashboardPage() {
                 {
                   header: "Current Price",
                   accessor: (row: any) => {
-                      const asset = assets?.find(a => a.symbol === row.symbol)
-                      return <span className="font-mono text-white">${asset?.current_price.toFixed(2) || '---'}</span>
+                    const asset = assets?.find(a => a.symbol === row.symbol)
+                    return <span className="font-mono text-white">${asset?.current_price.toFixed(2) || '---'}</span>
                   },
                 },
                 {
                   header: "Value",
                   accessor: (row: any) => {
-                      const asset = assets?.find(a => a.symbol === row.symbol)
-                      return <span className="font-mono text-white">${(row.amount * (asset?.current_price || 0)).toFixed(2)}</span>
+                    const asset = assets?.find(a => a.symbol === row.symbol)
+                    return <span className="font-mono text-white">${(row.amount * (asset?.current_price || 0)).toFixed(2)}</span>
                   },
                 },
                 {
@@ -276,18 +278,19 @@ export default async function DashboardPage() {
                   accessor: (row: any) => {
                     const asset = assets?.find(a => a.symbol === row.symbol)
                     if (!asset) return <span>---</span>
-                    
+
                     const cost = row.amount * row.average_buy_price
                     const current = row.amount * asset.current_price
                     const diff = current - cost
-                    
+
                     return (
-                    <span
-                      className={`font-mono font-bold ${diff >= 0 ? "text-emerald-500" : "text-red-500"}`}
-                    >
-                      {diff >= 0 ? "+" : ""}${diff.toFixed(2)}
-                    </span>
-                  )},
+                      <span
+                        className={`font-mono font-bold ${diff >= 0 ? "text-emerald-500" : "text-red-500"}`}
+                      >
+                        {diff >= 0 ? "+" : ""}${diff.toFixed(2)}
+                      </span>
+                    )
+                  },
                 },
               ]}
             />

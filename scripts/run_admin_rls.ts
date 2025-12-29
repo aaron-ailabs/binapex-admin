@@ -31,7 +31,7 @@ async function applyRls() {
     await client.connect()
     try {
         console.log('Reading SQL file...')
-        const sqlPath = path.resolve(process.cwd(), 'scripts/031_admin_profiles_rls.sql')
+        const sqlPath = path.resolve(process.cwd(), 'scripts/033_update_user_trigger.sql')
         const sql = fs.readFileSync(sqlPath, 'utf8')
 
         console.log('Applying RLS policies...')

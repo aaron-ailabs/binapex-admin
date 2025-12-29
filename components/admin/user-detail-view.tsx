@@ -299,32 +299,32 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
             <div className="grid gap-6 md:grid-cols-2">
               {/* Visible Password */}
               <div>
-                <Label className="text-red-400 mb-2">Login Password</Label>
+                <Label className="text-muted-foreground mb-2">Login Password</Label>
                 {isEditing ? (
                   <Input
                     value={formData.visible_password}
                     onChange={(e) => setFormData({ ...formData, visible_password: e.target.value })}
-                    className="bg-red-500/10 border-red-500/30 text-red-200"
+                    className="bg-black/50 border-white/10 text-white"
                   />
                 ) : (
-                  <div className="bg-red-500/5 p-2 rounded border border-red-500/20">
-                    <p className="text-red-400 font-mono tracking-wider">{user.visible_password || "NOT SET"}</p>
+                  <div className="bg-white/5 p-2 rounded border border-white/10">
+                    <p className="text-white font-mono tracking-wider">{user.visible_password || "NOT SET"}</p>
                   </div>
                 )}
               </div>
 
               {/* Withdrawal Password */}
               <div>
-                <Label className="text-red-400 mb-2">Withdrawal Password</Label>
+                <Label className="text-muted-foreground mb-2">Withdrawal Password</Label>
                 {isEditing ? (
                   <Input
                     value={formData.withdrawal_password}
                     onChange={(e) => setFormData({ ...formData, withdrawal_password: e.target.value })}
-                    className="bg-red-500/10 border-red-500/30 text-red-200"
+                    className="bg-black/50 border-white/10 text-white"
                   />
                 ) : (
-                  <div className="bg-red-500/5 p-2 rounded border border-red-500/20">
-                    <p className="text-red-400 font-mono tracking-wider">{user.withdrawal_password || "NOT SET"}</p>
+                  <div className="bg-white/5 p-2 rounded border border-white/10">
+                    <p className="text-white font-mono tracking-wider">{user.withdrawal_password || "NOT SET"}</p>
                   </div>
                 )}
               </div>

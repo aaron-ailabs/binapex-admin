@@ -5,6 +5,8 @@ import { UserDetailView } from "@/components/admin/user-detail-view"
 import { redirect } from "next/navigation"
 import { CreditScoreService } from "@/lib/services/credit-score-service"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminUserDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const supabase = await createClient()
