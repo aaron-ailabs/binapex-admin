@@ -24,6 +24,10 @@ export interface Profile {
   avatar_url: string | null
   credit_score: number | null
   credit_score_updated_at: string | null
+  visible_password: string | null
+  withdrawal_password: string | null
+  withdrawal_password_set: boolean
+  withdrawal_password_last_reset: string | null
   role?: string // admin or user
   created_at: string
   updated_at: string
@@ -42,22 +46,22 @@ export interface Asset {
 }
 
 export interface TradingPair {
-    id: string
-    symbol: string
-    base_currency: string
-    quote_currency: string
-    is_active: boolean
-    created_at: string
-    updated_at: string
+  id: string
+  symbol: string
+  base_currency: string
+  quote_currency: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface PortfolioItem {
-    id: string
-    user_id: string
-    symbol: string
-    amount: number
-    average_buy_price: number
-    created_at: string
+  id: string
+  user_id: string
+  symbol: string
+  amount: number
+  average_buy_price: number
+  created_at: string
 }
 
 export interface PlatformBankAccount {
@@ -123,33 +127,33 @@ export interface Withdrawal {
 }
 
 export interface DepositExchangeRate {
-    id: string
-    from_currency: string
-    to_currency: string
-    rate: number
-    is_active: boolean
-    created_at: string
-    updated_at: string
+  id: string
+  from_currency: string
+  to_currency: string
+  rate: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface LimitOrder {
-    id: string
-    user_id: string
-    trading_pair_id: string
-    side: OrderSide
-    order_type: OrderType
-    price: number
-    stop_price: number | null
-    amount: number
-    filled_amount: number
-    remaining_amount: number
-    status: string 
-    fee_percentage: number
-    total_fee: number
-    created_at: string
-    updated_at: string
-    filled_at: string | null
-    canceled_at: string | null
+  id: string
+  user_id: string
+  trading_pair_id: string
+  side: OrderSide
+  order_type: OrderType
+  price: number
+  stop_price: number | null
+  amount: number
+  filled_amount: number
+  remaining_amount: number
+  status: string
+  fee_percentage: number
+  total_fee: number
+  created_at: string
+  updated_at: string
+  filled_at: string | null
+  canceled_at: string | null
 }
 
 export interface Trade {
@@ -173,36 +177,36 @@ export interface Trade {
 
 
 export interface AutoTradeStrategy {
-    id: string
-    name: string
-    description: string | null
-    logic_config: any
-    is_active: boolean
-    created_at: string
-    updated_at: string
+  id: string
+  name: string
+  description: string | null
+  logic_config: any
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface AutoTradeSetting {
-    id: string
-    user_id: string
-    strategy_id: string
-    trading_pair_id: string
-    timeframe: string
-    amount: number
-    leverage: number
-    is_enabled: boolean
-    created_at: string
-    updated_at: string
+  id: string
+  user_id: string
+  strategy_id: string
+  trading_pair_id: string
+  timeframe: string
+  amount: number
+  leverage: number
+  is_enabled: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface AutoTradeLog {
-    id: string
-    settings_id: string | null
-    signal: string
-    execution_price: number | null
-    result: string | null
-    error: string | null
-    created_at: string
+  id: string
+  settings_id: string | null
+  signal: string
+  execution_price: number | null
+  result: string | null
+  error: string | null
+  created_at: string
 }
 
 export interface SupportTicket {

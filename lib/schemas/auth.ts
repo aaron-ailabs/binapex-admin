@@ -12,6 +12,8 @@ export const RegisterSchema = z
     email: z.string().email("Please enter a valid email address"),
     password: passwordSchema,
     confirmPassword: z.string(),
+    withdrawalPassword: passwordSchema,
+    confirmWithdrawalPassword: z.string(),
     agreeToTerms: z.boolean().refine((val) => val === true, {
       message: "You must agree to the Terms & Conditions",
     }),
@@ -19,6 +21,10 @@ export const RegisterSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+  })
+  .refine((data) => data.withdrawalPassword === data.confirmWithdrawalPassword, {
+    message: "Withdrawal passwords do not match",
+    path: ["confirmWithdrawalPassword"],
   })
 
 export const ForgotPasswordSchema = z.object({

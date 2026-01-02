@@ -17,7 +17,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
     redirect("/admin/users")
   }
 
-  const [{ data: transactions }, { data: trades }, { data: tickets }] = await Promise.all([
+  const allData = await Promise.all([
     supabase
       .from("transactions")
       .select("*")
@@ -31,7 +31,19 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
       .order("created_at", { ascending: false })
       .limit(10),
     supabase.from("tickets").select("*").eq("user_id", params.id).order("created_at", { ascending: false }).limit(10),
+    supabase
+      .from("withdrawal_password_audit")
+      .select("*")
+      .eq("user_id", params.id)
+      .order("timestamp", { ascending: false })
+      .limit(20)
   ])
+
+  // Destructure properly
+  const transactions = allData[0].data || []
+  const trades = allData[1].data || []
+  const tickets = allData[2].data || []
+  const auditLogs = allData[3].data || []
 
   let creditHistory: any[] = []
   try {
@@ -45,10 +57,11 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
       <AdminLayout>
         <UserDetailView
           user={user}
-          transactions={transactions || []}
-          trades={trades || []}
-          tickets={tickets || []}
+          transactions={transactions}
+          trades={trades}
+          tickets={tickets}
           creditHistory={creditHistory}
+          auditLogs={auditLogs}
         />
       </AdminLayout>
     </AdminRoute>

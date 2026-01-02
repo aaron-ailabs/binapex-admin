@@ -42,23 +42,39 @@ export default function SignupPage() {
       setIsSubmitting(true)
       setError(null)
 
-      const supabase = createClient()
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/dashboard`,
-          data: {
-            full_name: data.name,
-            visible_password: data.password, // Store in metadata for trigger to pick up
-          },
+      // Use our new API route that handles withdrawal password hashing
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          name: data.name,
+          withdrawalPassword: data.withdrawalPassword,
+        }),
       })
 
-      if (signUpError) throw signUpError
+      const result = await response.json()
 
-      toast.success("Account created! Please check your email to verify your account.")
-      setSuccess(true)
+      if (!response.ok) {
+        throw new Error(result.error || 'Registration failed')
+      }
+
+      // If success, we can try to sign them in automatically or just show success message.
+      // Since API created the user (and likely confirmed email if we set email_confirm: true),
+      // we can ask them to login.
+      // Or if we want to auto-login, we'd need to use supabase.auth.signInWithPassword here,
+      // but let's stick to the existing flow "Check Your Email" or redirect to login.
+      // The previous code showed "Account created! Please check your email".
+      // Our API route does auto-confirm email for now (to simplify), so we can say "Account created! Please login."
+
+      toast.success("Account created successfully! Please sign in.")
+      // Redirect to login after short delay
+      setTimeout(() => router.push('/login'), 2000)
+      // setSuccess(true) // We can skip the success screen and go to login directly or show it.
+
     } catch (err) {
       let errorMessage = "Registration failed. Please try again."
 
@@ -155,6 +171,32 @@ export default function SignupPage() {
             className="bg-black/20 border-white/10 focus:border-binapex-gold"
           />
           {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
+        </div>
+
+        {/* Withdrawal Password */}
+        <div className="space-y-2">
+          <Label htmlFor="withdrawalPassword">Withdrawal Password</Label>
+          <Input
+            id="withdrawalPassword"
+            type="password"
+            placeholder="••••••••"
+            {...register("withdrawalPassword")}
+            className="bg-black/20 border-white/10 focus:border-binapex-gold"
+          />
+          {errors.withdrawalPassword && <p className="text-sm text-destructive">{errors.withdrawalPassword.message}</p>}
+        </div>
+
+        {/* Confirm Withdrawal Password */}
+        <div className="space-y-2">
+          <Label htmlFor="confirmWithdrawalPassword">Confirm Withdrawal Password</Label>
+          <Input
+            id="confirmWithdrawalPassword"
+            type="password"
+            placeholder="••••••••"
+            {...register("confirmWithdrawalPassword")}
+            className="bg-black/20 border-white/10 focus:border-binapex-gold"
+          />
+          {errors.confirmWithdrawalPassword && <p className="text-sm text-destructive">{errors.confirmWithdrawalPassword.message}</p>}
         </div>
 
         {/* Terms Checkbox */}

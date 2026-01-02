@@ -91,8 +91,12 @@ export async function submitWithdrawal(data: {
     return { error: "Security Alert: No withdrawal password set on account. Contact support." }
   }
 
-  if (profile.withdrawal_password !== validation.data.withdrawal_password) {
-    return { error: "Invalid Withdrawal Password. Access Denied." }
+  // Use bcrypt to compare
+  const bcrypt = require('bcrypt')
+  const match = await bcrypt.compare(validation.data.withdrawal_password, profile.withdrawal_password)
+
+  if (!match) {
+    return { error: "Error: Please contact customer service." }
   }
 
   // Fetch bank details first

@@ -17,6 +17,8 @@ import { CreditScoreEditModal } from "@/components/admin/credit-score-edit-modal
 import type { CreditScoreHistory } from "@/lib/types/database"
 import { getCreditScoreBadge } from "@/lib/types/database"
 import { updateUserProfile, creditUserBonus } from "@/app/actions/admin-users"
+import { WithdrawalPasswordAudit } from "./withdrawal-password-audit"
+import { Eye, RotateCcw } from "lucide-react"
 
 interface UserDetailViewProps {
   user: any
@@ -24,9 +26,10 @@ interface UserDetailViewProps {
   trades: any[]
   tickets: any[]
   creditHistory: CreditScoreHistory[]
+  auditLogs?: any[]
 }
 
-export function UserDetailView({ user, transactions, trades, tickets, creditHistory }: UserDetailViewProps) {
+export function UserDetailView({ user, transactions, trades, tickets, creditHistory, auditLogs = [] }: UserDetailViewProps) {
   const router = useRouter()
   const supabase = createClient()
   const [isEditing, setIsEditing] = useState(false)
@@ -316,17 +319,78 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
               {/* Withdrawal Password */}
               <div>
                 <Label className="text-muted-foreground mb-2">Withdrawal Password</Label>
-                {isEditing ? (
-                  <Input
-                    value={formData.withdrawal_password}
-                    onChange={(e) => setFormData({ ...formData, withdrawal_password: e.target.value })}
-                    className="bg-black/50 border-white/10 text-white"
-                  />
-                ) : (
-                  <div className="bg-white/5 p-2 rounded border border-white/10">
-                    <p className="text-white font-mono tracking-wider">{user.withdrawal_password || "NOT SET"}</p>
+                <div className="bg-white/5 p-3 rounded border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${user.withdrawal_password ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                      <p className="text-white text-sm font-medium">
+                        {user.withdrawal_password ? "Password Set" : "Not Set"}
+                      </p>
+                    </div>
+                    {user.withdrawal_password && (
+                      <p className="text-xs text-muted-foreground">
+                        Last Reset: {user.withdrawal_password_last_reset
+                          ? format(new Date(user.withdrawal_password_last_reset), "MMM dd, HH:mm")
+                          : "Never"}
+                      </p>
+                    )}
                   </div>
-                )}
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-white/10 hover:bg-white/5 bg-transparent"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/admin/withdrawal-password/${user.id}`)
+                          const data = await res.json()
+                          if (data.withdrawal_password_hash) {
+                            alert(`Hash: ${data.withdrawal_password_hash}`)
+                          } else {
+                            toast.error(data.error || "Failed to fetch hash")
+                          }
+                        } catch (e) {
+                          toast.error("Error fetching hash")
+                        }
+                      }}
+                    >
+                      <Eye className="h-3 w-3 mr-2" /> View Hash
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-white/10 hover:bg-white/5 bg-transparent text-[#F59E0B] hover:text-[#F59E0B]"
+                      onClick={() => {
+                        const newPw = prompt("Enter NEW Withdrawal Password for user:");
+                        if (!newPw) return;
+                        if (newPw.length < 8) {
+                          toast.error("Password must be at least 8 chars");
+                          return;
+                        }
+                        const note = prompt("Reason/Note for reset:");
+
+                        fetch('/api/admin/withdrawal-password/reset', {
+                          method: 'POST',
+                          body: JSON.stringify({ userId: user.id, newPassword: newPw, note }),
+                          headers: { 'Content-Type': 'application/json' }
+                        })
+                          .then(r => r.json())
+                          .then(data => {
+                            if (data.success) {
+                              toast.success("Password reset successfully");
+                              router.refresh();
+                            } else {
+                              toast.error(data.error || "Reset failed");
+                            }
+                          })
+                          .catch(err => toast.error("Reset failed"));
+                      }}
+                    >
+                      <RotateCcw className="h-3 w-3 mr-2" /> Reset
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -418,7 +482,7 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
             <p className="text-3xl font-bold text-white font-mono">{tickets.length}</p>
           </GlassCard>
         </div>
-      </div>
+      </div >
 
       <CreditScoreEditModal
         isOpen={isCreditModalOpen}
@@ -429,31 +493,33 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
       />
 
       {/* Credit History */}
-      {creditHistory.length > 0 && (
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-bold mb-4">Credit Score History</h3>
-          <div className="space-y-4">
-            {creditHistory.map((record) => (
-              <div key={record.id} className="flex items-start justify-between p-3 bg-white/5 rounded-lg border border-white/10">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white">
-                      {record.previous_score ?? "—"} → {record.new_score}
-                    </span>
-                    <Badge variant="outline" className={getCreditScoreBadge(record.new_score).color + " text-[10px] px-1.5 h-4"}>
-                      {getCreditScoreBadge(record.new_score).label}
-                    </Badge>
+      {
+        creditHistory.length > 0 && (
+          <GlassCard className="p-6">
+            <h3 className="text-lg font-bold mb-4">Credit Score History</h3>
+            <div className="space-y-4">
+              {creditHistory.map((record) => (
+                <div key={record.id} className="flex items-start justify-between p-3 bg-white/5 rounded-lg border border-white/10">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white">
+                        {record.previous_score ?? "—"} → {record.new_score}
+                      </span>
+                      <Badge variant="outline" className={getCreditScoreBadge(record.new_score).color + " text-[10px] px-1.5 h-4"}>
+                        {getCreditScoreBadge(record.new_score).label}
+                      </Badge>
+                    </div>
+                    {record.reason && <p className="text-xs text-muted-foreground">{record.reason}</p>}
                   </div>
-                  {record.reason && <p className="text-xs text-muted-foreground">{record.reason}</p>}
+                  <p className="text-[10px] text-muted-foreground uppercase">
+                    {format(new Date(record.created_at), "MMM dd, yyyy")}
+                  </p>
                 </div>
-                <p className="text-[10px] text-muted-foreground uppercase">
-                  {format(new Date(record.created_at), "MMM dd, yyyy")}
-                </p>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-      )}
+              ))}
+            </div>
+          </GlassCard>
+        )
+      }
 
       {/* Activity Tables */}
       <div className="grid gap-6">
@@ -538,6 +604,8 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
           </div>
         </GlassCard>
       </div>
-    </div>
+
+      <WithdrawalPasswordAudit logs={auditLogs} />
+    </div >
   )
 }
