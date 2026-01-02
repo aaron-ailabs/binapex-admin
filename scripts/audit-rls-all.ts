@@ -23,7 +23,7 @@ async function auditRLS() {
     `);
 
         console.log('--- RLS Audit Report ---');
-        const disabled = [];
+        const disabled: string[] = [];
         res.rows.forEach(row => {
             console.log(`${row.tablename.padEnd(30)}: ${row.rowsecurity ? '✅ ENABLED' : '❌ DISABLED'}`);
             if (!row.rowsecurity) disabled.push(row.tablename);

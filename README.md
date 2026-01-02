@@ -1,30 +1,53 @@
-# Binapex v4.0
+# Binapex
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+Binapex is a next-generation trading platform with dual interfaces: **BullVest** (Fast Trades) and **BearVest** (Steady Trades). It features a premium design, real-time market data, and a secure backend.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/apexlabs-projects-2b373595/v0-binapex-landing-page-hu)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/NpmKvY6UxUs)
+## 🚀 Summary
+Binapex offers a comprehensive trading experience tailored for different market strategies.
+- **BullVest**: High-frequency trading portal for fast-paced market action.
+- **BearVest**: Strategic trading portal for long-term positions.
+- **Admin Portal**: Complete management system for users, trades, and finances.
 
-## Overview
+## 🛠 Tech Stack
+- **Frontend**: Next.js 16 (React 19), Tailwind CSS, Shadcn/UI
+- **Backend / Database**: Supabase (PostgreSQL, Auth, Realtime)
+- **Deployment**: Vercel & Docker
+- **Monitoring**: Sentry
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+## ⚙️ Workflow
 
-## Deployment
+### Local Development
+1.  **Clone the repository**:
+    ```bash
+    git clone <repo-url>
+    cd Binapex-dec
+    ```
+2.  **Install dependencies**:
+    ```bash
+    npm install --legacy-peer-deps
+    ```
+3.  **Set up Environment**:
+    - Copy `.env.example` to `.env.local`
+    - Add Supabase credentials.
+4.  **Run Development Server**:
+    ```bash
+    npm run dev
+    ```
+    Access the app at `http://localhost:3000`.
 
-Your project is live at:
+### Docker Deployment
+Binapex is container-ready.
+1.  **Build**: `docker-compose build`
+2.  **Run**: `docker-compose up -d`
+3.  **Access**: `http://localhost:3000`
 
-**[https://vercel.com/apexlabs-projects-2b373595/v0-binapex-landing-page-hu](https://vercel.com/apexlabs-projects-2b373595/v0-binapex-landing-page-hu)**
+### Vercel Deployment
+Designed for serverless deployment on Vercel.
+- **Production URL**: [https://www.binapex.my](https://www.binapex.my)
+- **Deploy Command**: `vercel deploy --prod`
 
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.app/chat/NpmKvY6UxUs](https://v0.app/chat/NpmKvY6UxUs)**
-
-## How It Works
-
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+## 📂 Project Structure
+- `/app`: Next.js App Router pages
+- `/components`: Reusable UI components
+- `/supabase`: Database migrations and types
+- `/public`: Static assets
