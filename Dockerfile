@@ -20,7 +20,8 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
 # Remove development dependencies
-RUN npm prune --production
+# Remove development dependencies
+# RUN npm prune --production
 
 # Stage 2: Runner
 FROM node:20-slim AS runner
