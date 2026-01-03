@@ -353,7 +353,7 @@ export function WithdrawalApprovalList() {
                   </Button>
                   <Button
                     onClick={() =>
-                      handleReject(selectedWithdrawal.id, selectedWithdrawal.user_id, selectedWithdrawal.amount)
+                      handleReject(selectedWithdrawal.id, selectedWithdrawal.user_id, selectedWithdrawal.amount_usd)
                     }
                     disabled={processing === selectedWithdrawal.id}
                     variant="destructive"

@@ -12,8 +12,15 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { submitWithdrawal } from "@/app/actions/banking"
 
+interface UserBank {
+  id: string
+  bank_name: string
+  account_number: string
+  account_name: string
+}
+
 interface WithdrawalFormProps {
-  userBanks: any[] // Keeping flexible for now
+  userBanks: UserBank[] // Keeping flexible for now
   currentBalance: number
 }
 

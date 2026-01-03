@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { WithdrawalForm } from "@/components/banking/withdrawal-form"
 import { PendingWithdrawals } from "@/components/banking/pending-withdrawals"
+
 import { GlassCard } from "@/components/ui/glass-card"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { AlertCircle } from "lucide-react"
 
 export default async function WithdrawalPage() {
@@ -37,6 +40,17 @@ export default async function WithdrawalPage() {
     .select("balance, locked_balance")
     .eq("user_id", user.id)
     .eq("asset", "USD")
+    .single()
+
+  const { data: userBanks } = await supabase
+    .from("user_banks")
+    .select("*")
+    .eq("user_id", user.id)
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("balance_usd, bonus_balance")
+    .eq("id", user.id)
     .single()
 
   const totalBalance = Number(wallet?.balance ?? profile?.balance_usd ?? 0)
@@ -79,14 +93,14 @@ export default async function WithdrawalPage() {
             <p className="text-gray-400 max-w-md mx-auto">
               For your security, you must set up a specific withdrawal password before you can request funds.
             </p>
-            <a href="/settings">
+            <Link href="/settings">
               <Button variant="default" className="bg-[#F59E0B] text-black font-bold hover:bg-[#D97706]">
                 Go to Settings to Setup
               </Button>
-            </a>
+            </Link>
           </GlassCard>
         ) : (
-          <WithdrawalForm currentBalance={availableBalance} />
+          <WithdrawalForm currentBalance={availableBalance} userBanks={userBanks || []} />
         )}
       </div>
     </DashboardLayout>

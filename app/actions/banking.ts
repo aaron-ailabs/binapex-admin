@@ -70,3 +70,41 @@ export async function submitWithdrawal(data: {
     return { error: error.message }
   }
 }
+
+export async function submitDeposit(data: {
+  amount: number
+  receipt_url: string
+  platform_bank_account_id?: string
+}) {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { error: "Unauthorized" }
+  }
+
+  const validation = depositSchema.safeParse(data)
+
+  if (!validation.success) {
+    return { error: validation.error.errors[0].message }
+  }
+
+  try {
+    const { data: result, error: rpcError } = await supabase.rpc("request_new_deposit", {
+      p_amount: validation.data.amount,
+      p_receipt_url: validation.data.receipt_url,
+      p_bank_id: validation.data.platform_bank_account_id
+    })
+
+    if (rpcError) {
+      throw new Error(rpcError.message)
+    }
+
+    revalidatePath("/history")
+    revalidatePath("/admin/deposits")
+    return { success: true }
+  } catch (error: any) {
+    console.error("Deposit processing error:", error)
+    return { error: error.message }
+  }
+}
