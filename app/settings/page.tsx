@@ -15,6 +15,7 @@ export default async function SettingsPage() {
   }
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  const { data: secret } = await supabase.from("user_withdrawal_secrets").select("user_id").eq("user_id", user.id).single()
 
   return (
     <DashboardLayout>
@@ -24,7 +25,7 @@ export default async function SettingsPage() {
           <p className="text-gray-400">Manage your account information and preferences</p>
         </div>
 
-        <SettingsForms user={user} profile={profile} />
+        <SettingsForms user={user} profile={profile} hasWithdrawalPassword={!!secret} />
       </div>
     </DashboardLayout>
   )

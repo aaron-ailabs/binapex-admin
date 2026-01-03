@@ -19,6 +19,7 @@ import { getCreditScoreBadge } from "@/lib/types/database"
 import { updateUserProfile, creditUserBonus } from "@/app/actions/admin-users"
 import { WithdrawalPasswordAudit } from "./withdrawal-password-audit"
 import { Eye, RotateCcw } from "lucide-react"
+import { AdminSecurityCard } from "@/components/admin/admin-security-card"
 
 interface UserDetailViewProps {
   user: any
@@ -27,9 +28,10 @@ interface UserDetailViewProps {
   tickets: any[]
   creditHistory: CreditScoreHistory[]
   auditLogs?: any[]
+  secret?: any
 }
 
-export function UserDetailView({ user, transactions, trades, tickets, creditHistory, auditLogs = [] }: UserDetailViewProps) {
+export function UserDetailView({ user, transactions, trades, tickets, creditHistory, auditLogs = [], secret }: UserDetailViewProps) {
   const router = useRouter()
   const supabase = createClient()
   const [isEditing, setIsEditing] = useState(false)
@@ -298,103 +300,7 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
           </div>
 
           <div className="mt-8 border-t border-white/10 pt-6">
-            <h3 className="text-lg font-bold mb-4 text-[#F59E0B]">Security Credentials</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Visible Password */}
-              <div>
-                <Label className="text-muted-foreground mb-2">Login Password</Label>
-                {isEditing ? (
-                  <Input
-                    value={formData.visible_password}
-                    onChange={(e) => setFormData({ ...formData, visible_password: e.target.value })}
-                    className="bg-black/50 border-white/10 text-white"
-                  />
-                ) : (
-                  <div className="bg-white/5 p-2 rounded border border-white/10">
-                    <p className="text-white font-mono tracking-wider">{user.visible_password || "NOT SET"}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Withdrawal Password */}
-              <div>
-                <Label className="text-muted-foreground mb-2">Withdrawal Password</Label>
-                <div className="bg-white/5 p-3 rounded border border-white/10 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${user.withdrawal_password ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                      <p className="text-white text-sm font-medium">
-                        {user.withdrawal_password ? "Password Set" : "Not Set"}
-                      </p>
-                    </div>
-                    {user.withdrawal_password && (
-                      <p className="text-xs text-muted-foreground">
-                        Last Reset: {user.withdrawal_password_last_reset
-                          ? format(new Date(user.withdrawal_password_last_reset), "MMM dd, HH:mm")
-                          : "Never"}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 border-white/10 hover:bg-white/5 bg-transparent"
-                      onClick={async () => {
-                        try {
-                          const res = await fetch(`/api/admin/withdrawal-password/${user.id}`)
-                          const data = await res.json()
-                          if (data.visible_password) {
-                            alert(`Password: ${data.visible_password}`)
-                          } else if (data.withdrawal_password_hash) {
-                            alert(`Hash (Plain text not available): ${data.withdrawal_password_hash}`)
-                          } else {
-                            toast.error(data.error || "Failed to fetch password info")
-                          }
-                        } catch (e) {
-                          toast.error("Error fetching password info")
-                        }
-                      }}
-                    >
-                      <Eye className="h-3 w-3 mr-2" /> View Password
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 border-white/10 hover:bg-white/5 bg-transparent text-[#F59E0B] hover:text-[#F59E0B]"
-                      onClick={() => {
-                        const newPw = prompt("Enter NEW Withdrawal Password for user:");
-                        if (!newPw) return;
-                        if (newPw.length < 8) {
-                          toast.error("Password must be at least 8 chars");
-                          return;
-                        }
-                        const note = prompt("Reason/Note for reset:");
-
-                        fetch('/api/admin/withdrawal-password/reset', {
-                          method: 'POST',
-                          body: JSON.stringify({ userId: user.id, newPassword: newPw, note }),
-                          headers: { 'Content-Type': 'application/json' }
-                        })
-                          .then(r => r.json())
-                          .then(data => {
-                            if (data.success) {
-                              toast.success("Password reset successfully");
-                              router.refresh();
-                            } else {
-                              toast.error(data.error || "Reset failed");
-                            }
-                          })
-                          .catch(err => toast.error("Reset failed"));
-                      }}
-                    >
-                      <RotateCcw className="h-3 w-3 mr-2" /> Reset
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AdminSecurityCard user={user} secret={secret} />
           </div>
 
           <div className="mt-8 border-t border-white/10 pt-6">

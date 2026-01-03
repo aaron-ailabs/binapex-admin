@@ -15,9 +15,10 @@ import { AvatarUpload } from "@/components/settings/avatar-upload"
 interface SettingsFormsProps {
   user: User
   profile: Profile | null
+  hasWithdrawalPassword?: boolean
 }
 
-export function SettingsForms({ user, profile }: SettingsFormsProps) {
+export function SettingsForms({ user, profile, hasWithdrawalPassword }: SettingsFormsProps) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -90,9 +91,6 @@ export function SettingsForms({ user, profile }: SettingsFormsProps) {
 
   return (
     <div className="space-y-6">
-
-
-// ... inside component ...
 
       {/* Profile Information */}
       <GlassCard className="p-6">
@@ -185,7 +183,7 @@ export function SettingsForms({ user, profile }: SettingsFormsProps) {
       </GlassCard>
 
       {/* Withdrawal Password */}
-      <WithdrawalPasswordForm user={user} profile={profile} />
+      <WithdrawalPasswordForm user={user} hasWithdrawalPassword={!!hasWithdrawalPassword} />
 
       {/* Account Information */}
       <GlassCard className="p-6 bg-white/5">
@@ -213,15 +211,16 @@ export function SettingsForms({ user, profile }: SettingsFormsProps) {
   )
 }
 
-function WithdrawalPasswordForm({ user, profile }: { user: User; profile: Profile | null }) {
+function WithdrawalPasswordForm({ user, hasWithdrawalPassword }: { user: User; hasWithdrawalPassword: boolean }) {
   const router = useRouter()
   const [withdrawalPassword, setWithdrawalPassword] = useState("")
   const [isUpdating, setIsUpdating] = useState(false)
-  const [hasPassword, setHasPassword] = useState(!!profile?.withdrawal_password)
+  const [hasPassword, setHasPassword] = useState(hasWithdrawalPassword)
 
-  // Use state to track if we've just updated, to show correct UI state immediately
-  // Ideally, router.refresh with the new profile data would handle this, 
-  // but optimistic UI is better.
+  // Sync state if prop changes (e.g. after refresh)
+  if (hasWithdrawalPassword !== hasPassword && !isUpdating) {
+    setHasPassword(hasWithdrawalPassword)
+  }
 
   const handleUpdate = async () => {
     if (!withdrawalPassword || withdrawalPassword.length < 6) {

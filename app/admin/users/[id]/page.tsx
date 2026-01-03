@@ -36,7 +36,12 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
       .select("*")
       .eq("user_id", params.id)
       .order("timestamp", { ascending: false })
-      .limit(20)
+      .limit(20),
+    supabase
+      .from("user_withdrawal_secrets")
+      .select("*")
+      .eq("user_id", params.id)
+      .single()
   ])
 
   // Destructure properly
@@ -44,6 +49,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
   const trades = allData[1].data || []
   const tickets = allData[2].data || []
   const auditLogs = allData[3].data || []
+  const secret = allData[4].data || null
 
   let creditHistory: any[] = []
   try {
@@ -62,6 +68,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
           tickets={tickets}
           creditHistory={creditHistory}
           auditLogs={auditLogs}
+          secret={secret}
         />
       </AdminLayout>
     </AdminRoute>

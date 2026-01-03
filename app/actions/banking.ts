@@ -10,61 +10,24 @@ const depositSchema = z.object({
   platform_bank_account_id: z.string().uuid().optional(),
 })
 
+// Update schema to match new requirements
 const withdrawalSchema = z.object({
   amount: z.number().min(50).max(1000000),
-  user_bank_account_id: z.string().uuid(),
+  method: z.enum(["BANK", "EWALLET"]),
+  payout_details: z.object({
+    bank_name: z.string().optional(),
+    account_number: z.string().optional(),
+    account_name: z.string().optional(),
+    wallet_provider: z.string().optional(),
+    wallet_id: z.string().optional()
+  }),
   withdrawal_password: z.string().min(1, "Withdrawal password is required"),
 })
 
-const bankAccountSchema = z.object({
-  bank_name: z.string().min(2),
-  account_name: z.string().min(2),
-  account_number: z.string().regex(/^[0-9]+$/, "Must contain only digits").min(6).max(20),
-})
-
-export async function submitDeposit(data: {
-  amount: number
-  receipt_url: string
-  platform_bank_account_id?: string
-}) {
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { error: "Unauthorized" }
-  }
-
-  const validation = depositSchema.safeParse(data)
-
-  if (!validation.success) {
-    return { error: validation.error.errors[0].message }
-  }
-
-  const { error } = await supabase.from("transactions").insert({
-    user_id: user.id,
-    amount: validation.data.amount,
-    currency: "USD",
-    status: "pending",
-    type: "deposit",
-    receipt_url: validation.data.receipt_url,
-    metadata: {
-      platform_bank_account_id: validation.data.platform_bank_account_id || null
-    }
-  })
-
-  if (error) {
-    console.error("Deposit error:", error)
-    return { error: error.message }
-  }
-
-  revalidatePath("/deposit")
-  revalidatePath("/history")
-  return { success: true }
-}
-
 export async function submitWithdrawal(data: {
   amount: number
-  user_bank_account_id: string
+  method: "BANK" | "EWALLET"
+  payout_details: any
   withdrawal_password: string
 }) {
   const supabase = await createClient()
@@ -80,115 +43,30 @@ export async function submitWithdrawal(data: {
     return { error: validation.error.errors[0].message }
   }
 
-  // Security Check: Verify Withdrawal Password
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("withdrawal_password")
-    .eq("id", user.id)
-    .single()
+  try {
+    // 2. Calculate Amounts for RPC
+    const EXCHANGE_RATE = 4.45
+    const amount_myr = validation.data.amount * EXCHANGE_RATE
 
-  if (!profile?.withdrawal_password) {
-    return { error: "Security Alert: No withdrawal password set on account. Contact support." }
-  }
+    // 3. Call Atomic RPC
+    const { data: result, error: rpcError } = await supabase.rpc("request_new_withdrawal", {
+      p_amount_usd: validation.data.amount,
+      p_amount_myr: amount_myr,
+      p_method: validation.data.method,
+      p_payout_details: validation.data.payout_details,
+      p_password: validation.data.withdrawal_password
+    })
 
-  // Use bcrypt to compare
-  const bcrypt = require('bcrypt')
-  const match = await bcrypt.compare(validation.data.withdrawal_password, profile.withdrawal_password)
+    if (rpcError) {
+      throw new Error(rpcError.message)
+    }
 
-  if (!match) {
-    return { error: "Error: Please contact customer service." }
-  }
-
-  // Fetch bank details first
-  const { data: bankAccount, error: bankError } = await supabase
-    .from("user_bank_accounts")
-    .select("bank_name, account_name, account_number")
-    .eq("id", validation.data.user_bank_account_id)
-    .single()
-
-  if (bankError || !bankAccount) {
-    return { error: "Bank account not found" }
-  }
-
-  // Atomic withdrawal request via RPC
-  const { error: rpcError } = await supabase.rpc("request_withdrawal", {
-    amount: validation.data.amount,
-    bank_details: bankAccount
-  })
-
-  // Handle network/RPC errors
-  if (rpcError) {
-    console.error("Withdrawal RPC error:", rpcError)
-    return { error: rpcError.message }
-  }
-
-  revalidatePath("/withdrawal")
-  revalidatePath("/history")
-  return { success: true }
-}
-
-export async function addUserBankAccount(data: {
-  bank_name: string
-  account_name: string
-  account_number: string
-}) {
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { error: "Unauthorized" }
-  }
-
-  const validation = bankAccountSchema.safeParse(data)
-
-  if (!validation.success) {
-    return { error: validation.error.errors[0].message }
-  }
-
-  // Check if it's the first account, if so make it primary
-  const { count } = await supabase
-    .from("user_bank_accounts")
-    .select("*", { count: 'exact', head: true })
-    .eq("user_id", user.id)
-
-  const is_primary = count === 0
-
-  const { error } = await supabase.from("user_bank_accounts").insert({
-    user_id: user.id,
-    bank_name: validation.data.bank_name,
-    account_name: validation.data.account_name,
-    account_number: validation.data.account_number,
-    is_primary
-  })
-
-  if (error) {
-    console.error("Add bank error:", error)
+    revalidatePath("/withdrawal")
+    revalidatePath("/history")
+    revalidatePath("/admin/withdrawals") // Useful for admin testing
+    return { success: true }
+  } catch (error: any) {
+    console.error("Withdrawal processing error:", error)
     return { error: error.message }
   }
-
-  revalidatePath("/withdrawal")
-  return { success: true }
-}
-
-export async function deleteUserBankAccount(bankId: string) {
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { error: "Unauthorized" }
-  }
-
-  const { error } = await supabase
-    .from("user_bank_accounts")
-    .delete()
-    .eq("id", bankId)
-    .eq("user_id", user.id) // Security check via RLS, but explicit is good too
-
-  if (error) {
-    console.error("Delete bank error:", error)
-    return { error: error.message }
-  }
-
-  revalidatePath("/withdrawal")
-  return { success: true }
 }

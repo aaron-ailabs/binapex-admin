@@ -17,15 +17,19 @@ export default async function WithdrawalPage() {
     redirect("/login")
   }
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  // Check for withdrawal password existence
+  const { data: secret } = await supabase
+    .from("user_withdrawal_secrets")
+    .select("is_locked")
+    .eq("user_id", user.id)
+    .single()
 
-  // Fetch pending withdrawals
+  // Fetch pending withdrawals from new table
   const { data: pendingWithdrawals } = await supabase
-    .from("transactions")
+    .from("withdrawals")
     .select("*")
     .eq("user_id", user.id)
-    .eq("type", "withdrawal")
-    .eq("status", "pending")
+    .eq("status", "PENDING")
     .order("created_at", { ascending: false })
 
   const { data: wallet } = await supabase
@@ -40,14 +44,12 @@ export default async function WithdrawalPage() {
   const bonusBalance = Number(profile?.bonus_balance ?? 0)
   const availableBalance = Math.max(0, totalBalance + bonusBalance - lockedBalance)
 
-  const { data: userBanks } = await supabase.from("user_bank_accounts").select("*").eq("user_id", user.id)
-
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">Withdraw Funds</h1>
-          <p className="text-gray-400">Request a withdrawal to your bank account</p>
+          <p className="text-gray-400">Request a withdrawal to your bank account or e-wallet</p>
         </div>
 
         <GlassCard className="p-6 border-[#F59E0B]/20 bg-[#F59E0B]/5">
@@ -57,9 +59,9 @@ export default async function WithdrawalPage() {
               <p className="font-medium text-[#F59E0B]">Important Withdrawal Information</p>
               <ul className="text-gray-300 space-y-1 list-disc list-inside">
                 <li>Withdrawals are typically processed within 24 hours</li>
-                <li>Bank account must be in your registered name</li>
+                <li>Account details must match your KYC name</li>
                 <li>Minimum withdrawal: $50 USD equivalent</li>
-                <li>You cannot withdraw funds with active open positions</li>
+                <li>Exchange Rate: 1 USD = 4.45 MYR</li>
               </ul>
             </div>
           </div>
@@ -70,14 +72,22 @@ export default async function WithdrawalPage() {
           <PendingWithdrawals transactions={pendingWithdrawals} />
         )}
 
-        <WithdrawalForm
-          userBanks={userBanks || []}
-          userId={user.id}
-          currentBalance={availableBalance} // Calculated Available
-          totalBalance={totalBalance}       // For display
-          lockedBalance={lockedBalance}     // For display
-          bonusBalance={bonusBalance}
-        />
+        {!secret ? (
+          <GlassCard className="p-8 text-center space-y-4">
+            <AlertCircle className="h-12 w-12 text-[#F59E0B] mx-auto" />
+            <h2 className="text-xl font-bold text-white">Withdrawal Password Not Set</h2>
+            <p className="text-gray-400 max-w-md mx-auto">
+              For your security, you must set up a specific withdrawal password before you can request funds.
+            </p>
+            <a href="/settings">
+              <Button variant="default" className="bg-[#F59E0B] text-black font-bold hover:bg-[#D97706]">
+                Go to Settings to Setup
+              </Button>
+            </a>
+          </GlassCard>
+        ) : (
+          <WithdrawalForm currentBalance={availableBalance} />
+        )}
       </div>
     </DashboardLayout>
   )
