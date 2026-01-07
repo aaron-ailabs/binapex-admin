@@ -22,7 +22,7 @@ export async function updateSession(request: NextRequest) {
 
   try {
     const pathname = request.nextUrl.pathname
-    
+
     // Skip auth check for public assets and static files
     // This addresses Issue 1: "Repeated supabase.auth.getUser() calls"
     if (isStaticAsset(pathname)) {
@@ -42,56 +42,62 @@ export async function updateSession(request: NextRequest) {
     if (isProtected || isAuthPage) {
       const { data } = await supabase.auth.getUser()
       user = data.user
-      
+
       if (user) {
         console.log("[Middleware] User authenticated:", user.email)
       }
     }
 
     // Apply Routing Logic - Addresses Issue 3 "God Function" by separating concerns
-    
+
     // 1. Dashboard Protection
     if (pathname.startsWith("/dashboard")) {
-       if (!user) {
+      if (!user) {
         return redirectTo(request, "/login")
-       }
+      }
     }
 
     // 2. Auth Page Redirection (Logged in users shouldn't see login page)
     if (isAuthPage && user && pathname !== "/admin/login") {
-       return redirectTo(request, "/dashboard")
+      return redirectTo(request, "/dashboard")
     }
 
     // 3. Admin Route Protection
-    if (pathname.startsWith("/admin") && pathname !== "/admin/login" && pathname !== "/admin/setup") {
+    if ((pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) && pathname !== "/admin/login" && pathname !== "/admin/setup") {
       if (!user) {
         console.log("[Middleware] Admin route accessed without authentication, redirecting to login")
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
         return redirectTo(request, "/admin/login")
       }
-      
+
       // SEC-03: Implement Edge RBAC check using cache to avoid excessive DB calls
       const cacheKey = user.id
       const cachedStatus = adminStatusCache.get(cacheKey)
       const now = Date.now()
-      
+
       let isAdmin = false
-      
+
       if (cachedStatus && (now - cachedStatus.timestamp) < ADMIN_CACHE_DURATION) {
         isAdmin = cachedStatus.isAdmin
       } else {
         // Fetch role from DB
         const { data: role } = await supabase.rpc("get_user_role")
         isAdmin = role === "admin"
-        
+
         // Update cache
         adminStatusCache.set(cacheKey, { isAdmin, timestamp: now })
       }
-      
+
       if (!isAdmin) {
         console.warn("[Middleware] Non-admin user attempted to access admin route:", user.email)
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
         return redirectTo(request, "/dashboard")
       }
-      
+
       console.log("[Middleware] Admin access verified at edge for:", user.email)
     }
 
@@ -131,7 +137,7 @@ function isStaticAsset(pathname: string) {
   if (pathname.startsWith("/_next") || pathname.startsWith("/static")) {
     return true
   }
-  
+
   // Check for common static file extensions
   const staticExtensions = [".ico", ".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp", ".css", ".js", ".woff", ".woff2", ".ttf"]
   return staticExtensions.some(ext => pathname.toLowerCase().endsWith(ext))
