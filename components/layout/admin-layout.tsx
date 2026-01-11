@@ -42,7 +42,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push("/login")
+    router.push("/admin/login")
   }
 
   return (
@@ -120,11 +120,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           {/* Bottom actions */}
           <div className="p-4 border-t border-border space-y-2">
             <Link
-              href="/dashboard"
+              href="/admin/dashboard"
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-card hover:text-foreground transition-all"
             >
               <ArrowLeft className="h-5 w-5" />
-              <span className="font-medium">Back to Dashboard</span>
+              <span className="font-medium">Admin Dashboard</span>
             </Link>
             <button
               onClick={handleLogout}

@@ -4,6 +4,8 @@ import { UserManagementTable } from "@/components/admin/user-management-table"
 import { getAdminUsersList } from "@/app/actions/admin/get-users"
 import { RefreshUsersButton } from "@/components/admin/refresh-users-button"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminUsersPage() {
   const users = await getAdminUsersList()
 

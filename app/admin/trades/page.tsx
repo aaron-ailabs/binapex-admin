@@ -3,6 +3,8 @@ import { AdminLayout } from "@/components/layout/admin-layout"
 import { AdminRoute } from "@/components/admin/admin-route"
 import { TradeSettlementTable } from "@/components/admin/trade-settlement-table"
 
+export const dynamic = "force-dynamic"
+
 export default function AdminTradesPage() {
   return (
     <AdminRoute>

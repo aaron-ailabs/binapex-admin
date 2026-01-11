@@ -3,6 +3,8 @@ import { AdminLayout } from "@/components/layout/admin-layout"
 import { createClient } from "@/lib/supabase/server"
 import { AdminTicketDesk } from "@/components/admin/admin-ticket-desk"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminTicketsPage() {
   const supabase = await createClient()
 

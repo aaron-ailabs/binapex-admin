@@ -47,13 +47,13 @@ export async function AdminRoute({ children }: AdminRouteProps) {
 
     if (profileError) {
       console.error("[AdminRoute] Profile query error:", profileError.message, profileError)
-      console.log("[AdminRoute] Redirecting to dashboard due to verification failure")
-      redirect("/dashboard")
+      console.log("[AdminRoute] Redirecting to admin login due to verification failure")
+      redirect("/admin/login")
     }
 
     if (profile?.role !== "admin") {
       console.warn("[AdminRoute] User is not admin (fallback check). Role:", profile?.role, "Email:", profile?.email)
-      redirect("/dashboard")
+      redirect("/admin/login")
     }
 
     console.log("[AdminRoute] Admin verified via fallback method. Role:", profile?.role)
@@ -62,7 +62,7 @@ export async function AdminRoute({ children }: AdminRouteProps) {
 
   if (role !== "admin") {
     console.warn("[AdminRoute] User is not admin. Role:", role)
-    redirect("/dashboard")
+    redirect("/admin/login")
   }
 
   console.log("[AdminRoute] Admin access granted. Role:", role)

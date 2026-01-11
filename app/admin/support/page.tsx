@@ -5,6 +5,8 @@ import { InboxList } from "@/components/admin/support/inbox-list"
 import { AdminChatWindow } from "@/components/admin/support/admin-chat-window"
 import { cn } from "@/lib/utils"
 
+export const dynamic = "force-dynamic"
+
 export default function AdminSupportPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 

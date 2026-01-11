@@ -3,6 +3,8 @@ import { AdminLayout } from "@/components/layout/admin-layout"
 import { createClient } from "@/lib/supabase/server"
 import { BankAccountManager } from "@/components/admin/bank-account-manager"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminBankAccountsPage() {
   const supabase = await createClient()
 

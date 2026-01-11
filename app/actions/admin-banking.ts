@@ -50,7 +50,6 @@ export async function addPlatformBankAccount(data: {
   }
 
   revalidatePath("/admin/finance")
-  revalidatePath("/deposit")
   return { success: true }
 }
 
@@ -67,7 +66,6 @@ export async function togglePlatformBankAccount(id: string, isActive: boolean) {
   if (error) return { error: error.message }
 
   revalidatePath("/admin/finance")
-  revalidatePath("/deposit")
   return { success: true }
 }
 
@@ -84,12 +82,10 @@ export async function deletePlatformBankAccount(id: string) {
     if (error) return { error: error.message }
   
     revalidatePath("/admin/finance")
-    revalidatePath("/deposit")
     return { success: true }
   }
 
 export async function revalidateBanks() {
     revalidatePath("/admin/finance")
-    revalidatePath("/deposit")
     return { success: true }
   }

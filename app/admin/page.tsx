@@ -3,6 +3,8 @@ import { AdminLayout } from "@/components/layout/admin-layout"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
 import { createClient } from "@/lib/supabase/server"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminPage() {
   const supabase = await createClient()
 

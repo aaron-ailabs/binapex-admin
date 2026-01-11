@@ -33,8 +33,8 @@ export async function updateSession(request: NextRequest) {
 
     // Determine if we need to authenticate the user
     // We only need auth if it's a protected route (or an auth route to redirect away)
-    const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || pathname.startsWith("/api")
-    const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/admin/login"
+    const isProtected = pathname.startsWith("/admin") || pathname.startsWith("/api")
+    const isAuthPage = pathname === "/admin/login"
 
     let user = null
 
@@ -50,19 +50,7 @@ export async function updateSession(request: NextRequest) {
 
     // Apply Routing Logic - Addresses Issue 3 "God Function" by separating concerns
 
-    // 1. Dashboard Protection
-    if (pathname.startsWith("/dashboard")) {
-      if (!user) {
-        return redirectTo(request, "/login")
-      }
-    }
-
-    // 2. Auth Page Redirection (Logged in users shouldn't see login page)
-    if (isAuthPage && user && pathname !== "/admin/login") {
-      return redirectTo(request, "/dashboard")
-    }
-
-    // 3. Admin Route Protection
+    // 1. Admin Route Protection
     if ((pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) && pathname !== "/admin/login" && pathname !== "/admin/setup") {
       if (!user) {
         console.log("[Middleware] Admin route accessed without authentication, redirecting to login")
@@ -95,7 +83,7 @@ export async function updateSession(request: NextRequest) {
         if (pathname.startsWith("/api/")) {
           return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
-        return redirectTo(request, "/dashboard")
+        return redirectTo(request, "/admin/login")
       }
 
       console.log("[Middleware] Admin access verified at edge for:", user.email)

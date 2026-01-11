@@ -4,6 +4,8 @@ import { getAdminStats } from "@/lib/supabase/admin-queries"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, DollarSign, Clock, TrendingUp } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminDashboardPage() {
   const stats = await getAdminStats()
 

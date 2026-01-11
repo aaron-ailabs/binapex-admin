@@ -4,6 +4,8 @@ import { AdminRoute } from "@/components/admin/admin-route"
 import { AdminAssetRow } from "@/components/admin/admin-asset-row"
 import { GlassCard } from "@/components/ui/glass-card"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminAssetsPage() {
   const supabase = await createClient()
 

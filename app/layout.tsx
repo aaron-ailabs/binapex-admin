@@ -4,7 +4,6 @@ import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/contexts/auth-context"
-import { SupportWidget } from "@/components/support/support-widget"
 import { ErrorBoundary } from "@/components/error-boundary" // Added import for ErrorBoundary
 import "./globals.css"
 
@@ -53,8 +52,6 @@ export default function RootLayout({
         <ErrorBoundary>
           <AuthProvider>
             {children}
-            <SupportWidget />
-
           </AuthProvider>
         </ErrorBoundary>
         <Analytics />

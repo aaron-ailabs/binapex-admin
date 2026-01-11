@@ -5,6 +5,8 @@ import { DepositApprovalList } from "@/components/admin/deposit-approval-list"
 import { ExchangeRateManager } from "@/components/admin/exchange-rate-manager"
 import { getExchangeRate } from "@/app/actions/exchange-rate"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminFinancePage() {
   const supabase = await createClient()
 

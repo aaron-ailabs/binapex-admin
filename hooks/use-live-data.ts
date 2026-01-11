@@ -1,72 +1,92 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 
-export function useLiveData<T>(table: string, initialData: T[], orderBy?: { column: string; ascending: boolean }) {
-  const [data, setData] = useState<T[]>(initialData)
+type SortOptions = {
+  column?: string
+  ascending?: boolean
+}
+
+function sortBy<T>(rows: T[], options?: SortOptions) {
+  const column = options?.column
+  if (!column) return rows
+
+  const ascending = options?.ascending ?? true
+  const copy = [...rows]
+
+  copy.sort((a: any, b: any) => {
+    const av = a?.[column]
+    const bv = b?.[column]
+
+    if (av == null && bv == null) return 0
+    if (av == null) return ascending ? -1 : 1
+    if (bv == null) return ascending ? 1 : -1
+
+    if (typeof av === "number" && typeof bv === "number") {
+      return ascending ? av - bv : bv - av
+    }
+
+    const as = String(av)
+    const bs = String(bv)
+    return ascending ? as.localeCompare(bs) : bs.localeCompare(as)
+  })
+
+  return copy
+}
+
+export function useLiveData<T extends { id?: string }>(
+  table: string,
+  initialRows: T[] = [],
+  sortOptions?: SortOptions,
+) {
+  const [rows, setRows] = useState<T[]>(() => sortBy(initialRows, sortOptions))
+
+  const initialSignature = useMemo(() => JSON.stringify(initialRows.map((r: any) => r?.id ?? "")), [initialRows])
+
+  useEffect(() => {
+    setRows(sortBy(initialRows, sortOptions))
+  }, [initialSignature])
 
   useEffect(() => {
     const supabase = createClient()
-    let channel: RealtimeChannel
+    let channel: RealtimeChannel | null = null
 
-    const setupChannel = () => {
-      channel = supabase
-        .channel(`${table}-changes`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: table,
-          },
-          (payload) => {
-            console.log(`[v0] New ${table} insert:`, payload)
-            setData((current) => {
-              const newData = [payload.new as T, ...current]
-              if (orderBy) {
-                return newData.sort((a: any, b: any) => {
-                  const aVal = a[orderBy.column]
-                  const bVal = b[orderBy.column]
-                  if (orderBy.ascending) {
-                    return aVal > bVal ? 1 : -1
-                  }
-                  return aVal < bVal ? 1 : -1
-                })
-              }
-              return newData
-            })
-          },
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: table,
-          },
-          (payload) => {
-            console.log(`[v0] ${table} update:`, payload)
-            setData((current) => current.map((item: any) => (item.id === payload.new.id ? (payload.new as T) : item)))
-          },
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "DELETE",
-            schema: "public",
-            table: table,
-          },
-          (payload) => {
-            console.log(`[v0] ${table} delete:`, payload)
-            setData((current) => current.filter((item: any) => item.id !== payload.old.id))
-          },
-        )
-        .subscribe()
-    }
+    channel = supabase
+      .channel(`live:${table}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table },
+        (payload: any) => {
+          const event = payload.eventType
+          const next = payload.new as T | null
+          const old = payload.old as T | null
 
-    setupChannel()
+          setRows((prev) => {
+            const prevList = [...prev]
+
+            if (event === "INSERT" && next) {
+              const exists = prevList.some((r: any) => r?.id && next && (r as any).id === (next as any).id)
+              const merged = exists ? prevList : [next, ...prevList]
+              return sortBy(merged, sortOptions)
+            }
+
+            if (event === "UPDATE" && next) {
+              const updated = prevList.map((r: any) => ((r as any).id === (next as any).id ? next : r))
+              return sortBy(updated, sortOptions)
+            }
+
+            if (event === "DELETE" && old) {
+              const filtered = prevList.filter((r: any) => (r as any).id !== (old as any).id)
+              return sortBy(filtered, sortOptions)
+            }
+
+            return prevList
+          })
+        },
+      )
+      .subscribe()
 
     return () => {
       if (channel) {
@@ -75,5 +95,5 @@ export function useLiveData<T>(table: string, initialData: T[], orderBy?: { colu
     }
   }, [table])
 
-  return data
+  return rows
 }
