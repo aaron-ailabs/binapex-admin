@@ -7,6 +7,9 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { ErrorBoundary } from "@/components/error-boundary" // Added import for ErrorBoundary
 import "./globals.css"
 
+export const dynamic = "force-dynamic"
+
+
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],

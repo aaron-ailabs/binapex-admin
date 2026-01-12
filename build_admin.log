@@ -1,0 +1,23 @@
+
+> binapex-dec@0.1.0 build
+> next build
+
+   Γû▓ Next.js 16.0.10 (Turbopack)
+
+ ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 7.4s
+   Running TypeScript ...
+Failed to compile.
+
+./app/actions/admin/get-users.ts:106:33
+Type error: Property 'banned_until' does not exist on type 'User'.
+
+  104 |         credit_score: profile.credit_score,
+  105 |         last_sign_in_at: authUser?.last_sign_in_at || null,
+> 106 |         banned_until: authUser?.banned_until || null,
+      |                                 ^
+  107 |         visible_password: profile.visible_password // Include only for Detail view if needed, but risky for List view.
+  108 |         // Actually, Detail view fetches profile directly, so this list might not need it, but good to have if we want to show it in table (probably not).
+  109 |       }
+Next.js build worker exited with code: 1 and signal: null

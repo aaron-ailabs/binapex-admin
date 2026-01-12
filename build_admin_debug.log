@@ -1,0 +1,30 @@
+
+> binapex-admin@0.1.0 build
+> next build
+
+ ΓÜá `eslint` configuration in next.config.mjs is no longer supported. See more info here: https://nextjs.org/docs/app/api-reference/cli/next#next-lint-options
+ ΓÜá Invalid next.config.mjs options detected: 
+ ΓÜá     Unrecognized key(s) in object: 'eslint'
+ ΓÜá See more info here: https://nextjs.org/docs/messages/invalid-next-config
+   Γû▓ Next.js 16.0.10 (Turbopack)
+
+ ΓÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 7.4s
+   Skipping validation of types
+   Collecting page data using 23 workers ...
+   Generating static pages using 23 workers (0/13) ...
+Error occurred prerendering page "/admin/notifications". Read more: https://nextjs.org/docs/messages/prerender-error
+Error: @supabase/ssr: Your project's URL and API key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (C:\Binapex (v2)\Binapex-dec\binapex-admin\.next\server\chunks\ssr\_38148463._.js:55:104)
+    at af (C:\Binapex (v2)\Binapex-dec\binapex-admin\.next\server\chunks\ssr\_38148463._.js:59:4748)
+    at bh (C:\Binapex (v2)\Binapex-dec\binapex-admin\.next\server\chunks\ssr\_c2ce68ae._.js:3:71715) {
+  digest: '1397894698'
+}
+Export encountered an error on /admin/notifications/page: /admin/notifications, exiting the build.
+ Γ¿» Next.js build worker exited with code: 1 and signal: null

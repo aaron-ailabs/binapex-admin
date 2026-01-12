@@ -103,7 +103,7 @@ export async function getAdminUsersList(): Promise<AdminUser[]> {
         joined_at: authUser?.created_at || profile.created_at,
         credit_score: profile.credit_score,
         last_sign_in_at: authUser?.last_sign_in_at || null,
-        banned_until: authUser?.banned_until || null,
+        banned_until: (authUser as any)?.banned_until || null,
         visible_password: profile.visible_password // Include only for Detail view if needed, but risky for List view.
         // Actually, Detail view fetches profile directly, so this list might not need it, but good to have if we want to show it in table (probably not).
       }
