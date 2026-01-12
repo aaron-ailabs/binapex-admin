@@ -34,11 +34,10 @@ export function TradeSettlementHistoryTable() {
 
   const fetchLogs = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from("trade_settlement_audit_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(200)
+    const { data, error } = await supabase.rpc('get_settlement_logs', {
+      p_outcome_filter: outcomeFilter === 'all' ? 'ALL' : outcomeFilter,
+      p_limit: 200
+    })
 
     if (error) {
       toast.error("Failed to load settlement logs")
@@ -47,26 +46,7 @@ export function TradeSettlementHistoryTable() {
       return
     }
 
-    const baseLogs = data || []
-
-    if (baseLogs.length === 0) {
-      setLogs([])
-      setLoading(false)
-      return
-    }
-
-    const userIds = Array.from(new Set(baseLogs.map((l) => l.user_id)))
-    const { data: users } = await supabase
-      .from("profiles")
-      .select("id, email")
-      .in("id", userIds)
-
-    const enriched = baseLogs.map((log) => ({
-      ...log,
-      user_email: users?.find((u) => u.id === log.user_id)?.email || undefined,
-    }))
-
-    setLogs(enriched)
+    setLogs(data || [])
     setLoading(false)
   }
 
