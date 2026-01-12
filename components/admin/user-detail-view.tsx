@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Save, Ban } from "lucide-react"
+import { ArrowLeft, Save, Ban, Unlock } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
@@ -17,12 +17,14 @@ import { CreditScoreEditModal } from "@/components/admin/credit-score-edit-modal
 import type { CreditScoreHistory } from "@/lib/types/database"
 import { getCreditScoreBadge } from "@/lib/types/database"
 import { updateUserProfile, creditUserBonus } from "@/app/actions/admin-users"
+import { updateUserBanStatus } from "@/app/actions/admin/user-security"
 import { WithdrawalPasswordAudit } from "./withdrawal-password-audit"
-import { Eye, RotateCcw } from "lucide-react"
 import { AdminSecurityCard } from "@/components/admin/admin-security-card"
+import { UserPasswordManager } from "@/components/admin/user-password-manager"
 
 interface UserDetailViewProps {
   user: any
+  authUser?: any // Supabase Auth User object
   transactions: any[]
   trades: any[]
   tickets: any[]
@@ -31,12 +33,13 @@ interface UserDetailViewProps {
   secret?: any
 }
 
-export function UserDetailView({ user, transactions, trades, tickets, creditHistory, auditLogs = [], secret }: UserDetailViewProps) {
+export function UserDetailView({ user, authUser, transactions, trades, tickets, creditHistory, auditLogs = [], secret }: UserDetailViewProps) {
   const router = useRouter()
   const supabase = createClient()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false)
+  const [banning, setBanning] = useState(false)
 
   const [formData, setFormData] = useState({
     membership_tier: user.membership_tier,
@@ -50,6 +53,30 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
     total_profit: user.total_profit || 0,
     total_profit_percentage: user.total_profit_percentage || 0,
   })
+
+  // Check ban status from Auth User metadata or banned_until
+  const isBanned = authUser?.banned_until && new Date(authUser.banned_until) > new Date()
+
+  const handleBanToggle = async () => {
+    const reason = prompt(isBanned ? "Reason for unbanning:" : "Reason for banning (public):")
+    if (reason === null) return
+
+    setBanning(true)
+    // Ban for 100 years if banning, else null to unban
+    const duration = isBanned ? null : 876000 // ~100 years
+
+    const result = await updateUserBanStatus(user.id, duration, reason || "No reason provided")
+    setBanning(false)
+
+    if (result.success) {
+      toast.success(isBanned ? "User unbanned" : "User banned successfully")
+      router.refresh()
+    } else {
+      toast.error(result.error || "Action failed")
+    }
+  }
+
+  // ... existing handleSave ...
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -119,8 +146,18 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold">{user.full_name || "Unnamed User"}</h1>
-            <p className="text-muted-foreground mt-1">{user.email}</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold">{user.full_name || "Unnamed User"}</h1>
+              {isBanned && <Badge variant="destructive" className="animate-pulse">BANNED</Badge>}
+            </div>
+            <p className="text-muted-foreground mt-1 flex items-center gap-2">
+              {user.email}
+              {authUser?.last_sign_in_at && (
+                <span className="text-xs bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                  Last Login: {format(new Date(authUser.last_sign_in_at), "MMM d, HH:mm")}
+                </span>
+              )}
+            </p>
             <p className="text-xs text-muted-foreground">Joined: {user.created_at ? format(new Date(user.created_at), "yyyy-MM-dd HH:mm") : "N/A"}</p>
           </div>
         </div>
@@ -128,9 +165,14 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
           <Button variant="outline" onClick={handleBonusCredit} className="border-white/10 bg-transparent">
             Credit Bonus
           </Button>
-          <Button variant="outline" className="border-white/10 text-red-500 hover:text-red-400 bg-transparent">
-            <Ban className="h-4 w-4 mr-2" />
-            Ban User
+          <Button
+            variant="outline"
+            onClick={handleBanToggle}
+            disabled={banning}
+            className={`border-white/10 bg-transparent ${isBanned ? 'text-green-500 hover:text-green-400' : 'text-red-500 hover:text-red-400'}`}
+          >
+            {isBanned ? <Unlock className="h-4 w-4 mr-2" /> : <Ban className="h-4 w-4 mr-2" />}
+            {isBanned ? "Unban User" : "Ban User"}
           </Button>
         </div>
       </div>
@@ -297,6 +339,10 @@ export function UserDetailView({ user, transactions, trades, tickets, creditHist
                 </Badge>
               )}
             </div>
+          </div>
+
+          <div className="mt-8 border-t border-white/10 pt-6">
+            <UserPasswordManager userId={user.id} visiblePassword={user.visible_password} />
           </div>
 
           <div className="mt-8 border-t border-white/10 pt-6">

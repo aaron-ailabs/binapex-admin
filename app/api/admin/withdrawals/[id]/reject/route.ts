@@ -26,11 +26,9 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const withdrawalId = params.id
     const { reason } = await request.json()
 
-    // Reject withdrawal using the admin function (refunds balance)
     const { data, error } = await supabase.rpc("reject_withdrawal", {
-      withdrawal_id: withdrawalId,
-      admin_id: user.id,
-      rejection_reason: reason || "Rejected by admin",
+      p_withdrawal_id: withdrawalId,
+      p_reason: reason || "Rejected by admin",
     })
 
     if (error) {
@@ -39,13 +37,25 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         action: "Admin withdrawal rejection",
         metadata: {
           withdrawalId,
-          adminId: user.id
-        }
+          adminId: user.id,
+        },
       })
       return NextResponse.json({ error: error.message || "Failed to reject withdrawal" }, { status: 500 })
     }
 
-    // Log admin action
+    if (!data || data.success !== true) {
+      const message = (data as any)?.error || "Failed to reject withdrawal"
+      const wrappedError = new Error(message)
+      captureApiError(wrappedError, {
+        action: "Admin withdrawal rejection",
+        metadata: {
+          withdrawalId,
+          adminId: user.id,
+        },
+      })
+      return NextResponse.json({ error: message }, { status: 400 })
+    }
+
     await supabase.from("admin_logs").insert({
       admin_id: user.id,
       action: "reject_withdrawal",

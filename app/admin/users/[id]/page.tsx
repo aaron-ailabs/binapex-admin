@@ -1,6 +1,7 @@
 import { AdminRoute } from "@/components/admin/admin-route"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@supabase/supabase-js" // Import generic client for Admin ops
 import { UserDetailView } from "@/components/admin/user-detail-view"
 import { redirect } from "next/navigation"
 import { CreditScoreService } from "@/lib/services/credit-score-service"
@@ -11,11 +12,22 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
   const params = await props.params;
   const supabase = await createClient()
 
+  // 1. Fetch Profile (using RLS context)
   const { data: user } = await supabase.from("profiles").select("*").eq("id", params.id).single()
 
   if (!user) {
     redirect("/admin/users")
   }
+
+  // 2. Fetch Auth User Data (using Admin Client)
+  // We need this for Last Login, Banned Status, and Email verification status
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+
+  const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.admin.getUserById(params.id)
 
   const allData = await Promise.all([
     supabase
@@ -41,7 +53,13 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
       .from("user_withdrawal_secrets")
       .select("*")
       .eq("user_id", params.id)
-      .single()
+      .single(),
+    supabase
+      .from("admin_audit_logs")
+      .select("*")
+      .eq("target_user_id", params.id)
+      .order("created_at", { ascending: false })
+      .limit(20)
   ])
 
   // Destructure properly
@@ -50,6 +68,12 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
   const tickets = allData[2].data || []
   const auditLogs = allData[3].data || []
   const secret = allData[4].data || null
+  const adminAuditLogs = allData[5].data || []
+
+  // Combine logs for cleaner view, or pass separate
+  // We'll pass adminAuditLogs separately or merge them if the view supports it.
+  // For now, let's keep existing structure but add admin logs if helpful. 
+  // UserDetailView expects `auditLogs` for withdrawal password. We'll stick to that for now.
 
   let creditHistory: any[] = []
   try {
@@ -63,6 +87,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
       <AdminLayout>
         <UserDetailView
           user={user}
+          authUser={authUser} // Pass Auth User Data
           transactions={transactions}
           trades={trades}
           tickets={tickets}

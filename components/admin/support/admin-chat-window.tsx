@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Send, ArrowLeft, Pencil, X, Check, Download, Image as ImageIcon } from "lucide-react"
+import { Send, ArrowLeft, Pencil, X, Check, CheckCheck, Download, Paperclip } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
+import { format } from "date-fns"
 
 interface Message {
   id: string
@@ -15,6 +16,7 @@ interface Message {
   sender_role: "user" | "admin"
   created_at: string
   user_id: string
+  is_read: boolean
   attachment_url?: string
   attachment_type?: string
 }
@@ -33,47 +35,22 @@ function ChatMessageAttachment({ path, type }: { path?: string, type?: string })
 
       if (data?.signedUrl) {
         setUrl(data.signedUrl)
-
-        // Log admin access audit
-        try {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
-            await supabase.functions.invoke('capture-admin-action', {
-              body: {
-                user_id: user.id,
-                action: 'VIEW_ATTACHMENT',
-                payload: { path, type }
-              }
-            })
-          }
-        } catch (e) {
-          console.error("Failed to log audit", e)
-        }
       }
     }
     fetchUrl()
   }, [path, supabase])
 
   if (!path) return null
-  if (!url) return <div className="h-48 w-48 animate-pulse rounded-lg bg-zinc-800/50" />
+  if (!url) return <div className="h-48 w-48 animate-pulse rounded-lg bg-black/20" />
 
   return (
-    <div className="mt-2 group/image relative">
+    <div className="mt-1 mb-1">
       <img
         src={url}
         alt="Attachment"
-        className="max-h-60 max-w-full rounded-lg border border-white/10 object-contain cursor-pointer"
+        className="max-h-60 max-w-full rounded-lg border border-black/10 object-contain cursor-pointer"
         onClick={() => window.open(url, '_blank')}
       />
-      <a
-        href={url}
-        download
-        target="_blank"
-        className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover/image:opacity-100"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Download className="h-4 w-4" />
-      </a>
     </div>
   )
 }
@@ -84,13 +61,30 @@ interface AdminChatWindowProps {
 }
 
 export function AdminChatWindow({ selectedUserId, onBack }: AdminChatWindowProps) {
-  const { user: currentUser } = useAuth() // Only used to verify auth, though sender_role is hardcoded 'admin'
   const supabase = createClient()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [userDetail, setUserDetail] = useState<{ email: string } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Fetch user details
+  useEffect(() => {
+    if (!selectedUserId) return;
+
+    const fetchUser = async () => {
+      const { data } = await supabase.from('profiles').select('email').eq('id', selectedUserId).single()
+      if (data) setUserDetail(data)
+      else {
+        // fallback if profiles doesn't have email logic aligned or RLS
+        // We rely on the inbox list view usually, but for header we want it.
+        // Let's assume we can get it or just show ID
+        setUserDetail({ email: 'User' })
+      }
+    }
+    fetchUser()
+  }, [selectedUserId])
+
 
   // Fetch messages when selected user changes
   useEffect(() => {
@@ -109,6 +103,15 @@ export function AdminChatWindow({ selectedUserId, onBack }: AdminChatWindowProps
 
       if (!error && data) {
         setMessages(data as Message[])
+
+        // Mark USER messages as read
+        const unreadUserMsgIds = (data as Message[])
+          .filter(m => m.sender_role === 'user' && !m.is_read)
+          .map(m => m.id)
+
+        if (unreadUserMsgIds.length > 0) {
+          await supabase.from("support_messages").update({ is_read: true }).in("id", unreadUserMsgIds)
+        }
       }
       setIsLoading(false)
     }
@@ -121,13 +124,21 @@ export function AdminChatWindow({ selectedUserId, onBack }: AdminChatWindowProps
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "support_messages",
           filter: `user_id=eq.${selectedUserId}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message])
+          if (payload.eventType === 'INSERT') {
+            setMessages((prev) => [...prev, payload.new as Message])
+            // If message is from user, mark read immediately if this window is active
+            if ((payload.new as Message).sender_role === 'user') {
+              supabase.from("support_messages").update({ is_read: true }).eq('id', (payload.new as Message).id)
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            setMessages((prev) => prev.map(m => m.id === payload.new.id ? payload.new as Message : m))
+          }
         }
       )
       .subscribe()
@@ -152,116 +163,111 @@ export function AdminChatWindow({ selectedUserId, onBack }: AdminChatWindowProps
     setNewMessage("")
 
     const { error } = await supabase.from("support_messages").insert({
-      user_id: selectedUserId, // IMPORTANT: The CUSTOMER'S ID, not the Admin's ID
+      user_id: selectedUserId, // IMPORTANT: The CUSTOMER'S ID
       content: content,
       sender_role: "admin",
     })
 
     if (error) {
       console.error("Failed to send reply:", error)
-      // Restore message if needed
     }
-  }
-
-  const handleEditClick = (msg: Message) => {
-    setEditingMessageId(msg.id)
-    setNewMessage(msg.content)
-    // Focus input is handled by auto-focus on re-render or we can use a ref
-  }
-
-  const handleCancelEdit = () => {
-    setEditingMessageId(null)
-    setNewMessage("")
-  }
-
-  const handleUpdateMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMessage.trim() || !editingMessageId) return
-
-    const content = newMessage.trim()
-
-    // Optimistic update (optional, but good for UX)
-    setMessages(prev => prev.map(m => m.id === editingMessageId ? { ...m, content } : m))
-
-    const { error } = await supabase
-      .from("support_messages")
-      .update({ content })
-      .eq("id", editingMessageId)
-
-    if (error) {
-      console.error("Failed to update message:", error)
-      // Revert desirable? For now just log
-    }
-
-    setEditingMessageId(null)
-    setNewMessage("")
   }
 
   if (!selectedUserId) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-zinc-950 text-zinc-500">
-        <p>Select a conversation to start chatting</p>
+      <div className="flex h-full w-full flex-col items-center justify-center bg-[#222e35] text-[#aebac1] border-b-[6px] border-[#00a884]">
+        {/* Placeholder for no chat selected - WhatsApp Web style */}
+        <div className="max-w-[460px] text-center">
+          <h1 className="text-[32px] font-light text-[#e9edef] mt-7">WhatsApp Web (Binapex Support)</h1>
+          <div className="mt-4 text-sm leading-5">
+            Send and receive messages without keeping your phone online. <br />
+            Use Binapex Support on up to 4 linked devices and 1 phone.
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950 min-h-0">
+    <div className="flex h-full flex-col bg-[#0a0a0a] min-h-0 relative">
+      {/* Wallpaper */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")`,
+          backgroundRepeat: 'repeat'
+        }}
+      />
+
       {/* Header */}
-      <div className="border-b border-zinc-800 bg-zinc-950 p-4 flex items-center gap-3">
-        {onBack && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden h-8 w-8 text-zinc-400 hover:text-white"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        )}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-zinc-200 truncate">Chat with User</h3>
-          <p className="text-xs text-zinc-500 font-mono truncate">{selectedUserId}</p>
+      <div className="bg-[#1a1a1a] p-3 px-4 flex items-center justify-between border-b border-[#262626] z-10 w-full">
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <Button variant="ghost" size="icon" className="md:hidden text-[#a3a3a3]" onClick={onBack}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          <div className="h-10 w-10 rounded-full overflow-hidden cursor-pointer border border-[#262626]">
+            <img src={`https://ui-avatars.com/api/?name=${userDetail?.email || 'User'}&background=random`} alt="User" className="h-full w-full object-cover" />
+          </div>
+          <div className="flex flex-col cursor-pointer">
+            <span className="text-[#fafafa] text-base leading-tight">
+              {userDetail?.email || selectedUserId}
+            </span>
+            <span className="text-xs text-[#a3a3a3] mt-0.5">
+              click to view info
+            </span>
+          </div>
+        </div>
+        <div className="flex gap-4 text-[#a3a3a3]">
+          {/* Search, etc */}
         </div>
       </div>
 
       {/* Message List */}
-      <ScrollArea className="flex-1 p-4 overflow-hidden">
-        <div className="space-y-4">
+      <ScrollArea className="flex-1 p-0 overflow-hidden z-10">
+        <div className="flex flex-col p-4 space-y-2 min-h-full justify-end pb-2">
           {isLoading ? (
             <div className="flex justify-center p-4">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber-500 border-t-transparent"></div>
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#EBD062] border-t-transparent"></div>
             </div>
           ) : (
             messages.map((msg) => (
               <div
                 key={msg.id}
                 className={cn(
-                  "flex w-full",
+                  "flex w-full mb-1",
                   msg.sender_role === "admin" ? "justify-end" : "justify-start"
                 )}
               >
                 <div
                   className={cn(
-                    "max-w-[80%] px-4 py-2 text-sm shadow-sm relative group",
+                    "relative px-3 py-1.5 shadow-sm max-w-[80%] min-w-[100px] text-sm group break-words",
                     msg.sender_role === "admin"
-                      ? "bg-amber-500 text-black rounded-2xl rounded-tr-none"
-                      : "bg-zinc-800 text-white rounded-2xl rounded-tl-none"
+                      ? "bg-[#EBD062] text-black rounded-lg rounded-tr-none"
+                      : "bg-[#262626] text-[#fafafa] rounded-lg rounded-tl-none"
                   )}
                 >
-                  {msg.content}
                   {msg.attachment_url && (
                     <ChatMessageAttachment path={msg.attachment_url} type={msg.attachment_type} />
                   )}
-                  {msg.sender_role === "admin" && (
-                    <button
-                      onClick={() => handleEditClick(msg)}
-                      className="absolute -left-8 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                      title="Edit message"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  )}
+
+                  <div className="mr-8 pb-1 font-medium">
+                    {msg.content}
+                  </div>
+
+                  <div className="absolute bottom-1 right-2 flex items-center gap-1">
+                    <span className={cn("text-[10px] leading-none", msg.sender_role === "admin" ? "text-black/60" : "text-white/60")}>
+                      {format(new Date(msg.created_at), "HH:mm")}
+                    </span>
+                    {msg.sender_role === "admin" && (
+                      <span className={cn(
+                        "text-[10px] leading-none",
+                        msg.is_read ? "text-black" : "text-black/40"
+                      )}>
+                        {msg.is_read ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
@@ -271,35 +277,26 @@ export function AdminChatWindow({ selectedUserId, onBack }: AdminChatWindowProps
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="border-t border-zinc-800 bg-zinc-950 p-4">
-        <form onSubmit={editingMessageId ? handleUpdateMessage : handleSendMessage} className="flex gap-2 items-end">
+      <div className="bg-[#1a1a1a] p-2 px-4 z-10 flex items-end gap-2 border-t border-[#262626]">
+        {/* Paperclip */}
+        <Button variant="ghost" size="icon" className="text-[#a3a3a3] h-10 w-10">
+          <Paperclip className="h-6 w-6" />
+        </Button>
+
+        <form onSubmit={handleSendMessage} className="flex-1 flex items-end gap-2 mb-1">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={editingMessageId ? "Edit your message..." : "Type your reply..."}
-            className={cn(
-              "flex-1 bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-amber-500",
-              editingMessageId && "border-amber-500/50"
-            )}
+            placeholder="Type a message"
+            className="flex-1 border-none bg-[#262626] text-[#fafafa] placeholder:text-[#a3a3a3] focus-visible:ring-1 focus-visible:ring-[#EBD062]/50 rounded-lg min-h-[40px] py-2"
           />
-          {editingMessageId && (
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={handleCancelEdit}
-              className="text-zinc-400 hover:text-white"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
           <Button
             type="submit"
             size="icon"
             disabled={!newMessage.trim()}
-            className="bg-amber-500 text-black hover:bg-amber-600"
+            className="text-[#a3a3a3] hover:bg-transparent h-10 w-10 hover:text-[#EBD062]"
           >
-            {editingMessageId ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+            <Send className="h-6 w-6" />
           </Button>
         </form>
       </div>

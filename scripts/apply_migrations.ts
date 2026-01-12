@@ -16,7 +16,9 @@ const migrations = [
   '20260112000001_trade_notifications.sql',
   '20260112000002_add_cron.sql',
   '20260112000003_update_binary_rpc.sql',
-  '20260112000004_update_orders_status.sql'
+  '20260112000004_update_orders_status.sql',
+  '20260112000005_signup_notifications.sql',
+  '20260112000006_unify_binary_trading.sql'
 ];
 
 async function applyMigrations() {

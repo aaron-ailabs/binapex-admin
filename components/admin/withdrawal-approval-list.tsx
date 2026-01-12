@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle, XCircle, Eye, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Withdrawal {
   id: string
@@ -17,6 +19,7 @@ interface Withdrawal {
   status: string
   method: string
   created_at: string
+  admin_note?: string
   payout_details: {
     bank_name?: string
     account_name?: string
@@ -36,6 +39,13 @@ export function WithdrawalApprovalList() {
   const [loading, setLoading] = useState(true)
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null)
   const [processing, setProcessing] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "COMPLETED" | "REJECTED">("PENDING")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [rejectTarget, setRejectTarget] = useState<Withdrawal | null>(null)
+  const [rejectReason, setRejectReason] = useState("")
+  const [rejectSubmitting, setRejectSubmitting] = useState(false)
+  const [approveTarget, setApproveTarget] = useState<Withdrawal | null>(null)
+  const [approveSubmitting, setApproveSubmitting] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -71,7 +81,6 @@ export function WithdrawalApprovalList() {
         profiles:user_id (full_name, email)
       `,
       )
-      .eq("status", "PENDING") // Default filter to pending or fetch all and filter in UI? Current UI filters client side. Let's fetch all for recent history.
       .order("created_at", { ascending: false })
 
     if (error) {
@@ -85,44 +94,72 @@ export function WithdrawalApprovalList() {
 
   const handleApprove = async (withdrawalId: string) => {
     setProcessing(withdrawalId)
+    setApproveSubmitting(true)
 
-    // TODO: Update to use new approval RPC or logic
-    // For now, we update the status directly if allowed by RLS for admin
-    const { error } = await supabase
-      .from("withdrawals")
-      .update({ status: 'COMPLETED' })
-      .eq("id", withdrawalId)
+    try {
+      const response = await fetch(`/api/admin/withdrawals/${withdrawalId}/approve`, {
+        method: "POST",
+      })
 
-    if (error) {
-      console.error("Error approving withdrawal:", error)
-      toast.error(error.message || "Failed to approve withdrawal")
-    } else {
+      const body = await response.json().catch(() => ({}))
+
+      if (!response.ok || body?.success !== true) {
+        const message = body?.error || "Failed to approve withdrawal"
+        toast.error(message)
+        return
+      }
+
       toast.success("Withdrawal approved successfully")
       fetchWithdrawals()
       setSelectedWithdrawal(null)
+      setApproveTarget(null)
+    } catch (e: any) {
+      console.error("Error approving withdrawal:", e)
+      toast.error(e.message || "Failed to approve withdrawal")
+    } finally {
+      setProcessing(null)
+      setApproveSubmitting(false)
     }
-    setProcessing(null)
   }
 
-  const handleReject = async (withdrawalId: string, userId: string, amount: number) => {
+  const handleReject = async (withdrawalId: string, reason: string) => {
+    if (!reason.trim()) {
+      toast.error("Rejection reason is required")
+      return
+    }
+
     setProcessing(withdrawalId)
+    setRejectSubmitting(true)
 
-    // TODO: Need refund logic here!
-    // For now, update status to REJECTED
-    const { error } = await supabase
-      .from("withdrawals")
-      .update({ status: 'REJECTED' })
-      .eq("id", withdrawalId)
+    try {
+      const response = await fetch(`/api/admin/withdrawals/${withdrawalId}/reject`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reason }),
+      })
 
-    if (error) {
-      console.error("Error rejecting withdrawal:", error)
-      toast.error(error.message || "Failed to reject withdrawal")
-    } else {
-      toast.success("Withdrawal rejected")
+      const body = await response.json().catch(() => ({}))
+
+      if (!response.ok || body?.success !== true) {
+        const message = body?.error || "Failed to reject withdrawal"
+        toast.error(message)
+        return
+      }
+
+      toast.success("Withdrawal rejected and refunded")
       fetchWithdrawals()
       setSelectedWithdrawal(null)
+      setRejectTarget(null)
+      setRejectReason("")
+    } catch (e: any) {
+      console.error("Error rejecting withdrawal:", e)
+      toast.error(e.message || "Failed to reject withdrawal")
+    } finally {
+      setProcessing(null)
+      setRejectSubmitting(false)
     }
-    setProcessing(null)
   }
 
   if (loading) {
@@ -136,6 +173,25 @@ export function WithdrawalApprovalList() {
   const pendingWithdrawals = withdrawals.filter((w) => w.status === "PENDING")
   const completedWithdrawals = withdrawals.filter((w) => w.status === "COMPLETED")
   const rejectedWithdrawals = withdrawals.filter((w) => w.status === "REJECTED")
+
+  const filteredWithdrawals = withdrawals.filter((w) => {
+    const statusOk = statusFilter === "ALL" || w.status === statusFilter
+
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return statusOk
+
+    const haystack = [
+      w.profiles?.full_name,
+      w.profiles?.email,
+      w.id,
+      w.user_id,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+
+    return statusOk && haystack.includes(query)
+  })
 
   return (
     <div className="space-y-6">
@@ -174,9 +230,36 @@ export function WithdrawalApprovalList() {
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-foreground">Withdrawal Requests</CardTitle>
-          <CardDescription className="text-muted-foreground">{withdrawals.length} total requests</CardDescription>
+          <CardDescription className="text-muted-foreground">
+            {filteredWithdrawals.length} / {withdrawals.length} total requests
+          </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center md:justify-between">
+            <Input
+              placeholder="Search by name, email, ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-md bg-background border-border"
+            />
+            <div className="flex gap-2">
+              {(["ALL", "PENDING", "COMPLETED", "REJECTED"] as const).map((status) => (
+                <Button
+                  key={status}
+                  size="sm"
+                  variant={statusFilter === status ? "default" : "outline"}
+                  onClick={() => setStatusFilter(status)}
+                  className={
+                    statusFilter === status
+                      ? "bg-[#F59E0B] text-black"
+                      : "border-border bg-transparent hover:bg-muted/50"
+                  }
+                >
+                  {status === "ALL" ? "All" : status}
+                </Button>
+              ))}
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -185,31 +268,35 @@ export function WithdrawalApprovalList() {
                   <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Amount</th>
                   <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Details</th>
                   <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Status</th>
+                  <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Admin Note</th>
                   <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Date</th>
                   <th className="text-right p-4 text-muted-foreground font-medium whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {withdrawals.length === 0 ? (
+                {filteredWithdrawals.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center p-8 text-muted-foreground">
-                      No withdrawals found
+                    <td colSpan={7} className="text-center p-8 text-muted-foreground">
+                      No withdrawals match the current filters
                     </td>
                   </tr>
                 ) : (
-                  withdrawals.map((withdrawal) => {
-                    // Extract bank info from payout_details
+                  filteredWithdrawals.map((withdrawal) => {
                     const method = withdrawal.method || "BANK"
                     const details: any = withdrawal.payout_details || {}
-                    const title = method === 'BANK' ? details.bank_name : details.wallet_provider
-                    const sub = method === 'BANK' ? details.account_number : details.wallet_id
+                    const title = method === "BANK" ? details.bank_name : details.wallet_provider
+                    const sub = method === "BANK" ? details.account_number : details.wallet_id
 
                     return (
                       <tr key={withdrawal.id} className="border-b border-border hover:bg-muted/50">
                         <td className="p-4 whitespace-nowrap">
                           <div>
-                            <div className="font-medium text-foreground">{withdrawal.profiles?.full_name || "Unknown"}</div>
-                            <div className="text-sm text-muted-foreground">{withdrawal.profiles?.email || "No Email"}</div>
+                            <div className="font-medium text-foreground">
+                              {withdrawal.profiles?.full_name || "Unknown"}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {withdrawal.profiles?.email || "No Email"}
+                            </div>
                           </div>
                         </td>
                         <td className="p-4 whitespace-nowrap">
@@ -218,7 +305,9 @@ export function WithdrawalApprovalList() {
                         </td>
                         <td className="p-4 whitespace-nowrap">
                           <div className="text-sm text-foreground font-medium">{method}</div>
-                          <div className="text-sm text-muted-foreground">{title} ({sub})</div>
+                          <div className="text-sm text-muted-foreground">
+                            {title} ({sub})
+                          </div>
                         </td>
                         <td className="p-4 whitespace-nowrap">
                           <Badge
@@ -232,6 +321,11 @@ export function WithdrawalApprovalList() {
                           >
                             {withdrawal.status}
                           </Badge>
+                        </td>
+                        <td className="p-4 max-w-xs align-top">
+                          <div className="text-xs text-muted-foreground truncate" title={withdrawal.admin_note || ""}>
+                            {withdrawal.admin_note || "-"}
+                          </div>
                         </td>
                         <td className="p-4 whitespace-nowrap text-sm text-muted-foreground">
                           {new Date(withdrawal.created_at).toLocaleDateString()}
@@ -248,14 +342,14 @@ export function WithdrawalApprovalList() {
                             </Button>
                             {withdrawal.status === "PENDING" && (
                               <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleApprove(withdrawal.id)}
-                                  disabled={processing === withdrawal.id}
-                                  className="text-green-500 hover:bg-green-500/10"
-                                >
-                                  {processing === withdrawal.id ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setApproveTarget(withdrawal)}
+                              disabled={processing === withdrawal.id}
+                              className="text-green-500 hover:bg-green-500/10"
+                            >
+                              {processing === withdrawal.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
                                     <CheckCircle className="h-4 w-4" />
@@ -264,7 +358,10 @@ export function WithdrawalApprovalList() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleReject(withdrawal.id, withdrawal.user_id, withdrawal.amount_usd)}
+                                  onClick={() => {
+                                    setRejectTarget(withdrawal)
+                                    setRejectReason("")
+                                  }}
                                   disabled={processing === withdrawal.id}
                                   className="text-red-500 hover:bg-red-500/10"
                                 >
@@ -284,7 +381,6 @@ export function WithdrawalApprovalList() {
         </CardContent>
       </Card>
 
-      {/* Withdrawal details dialog */}
       <Dialog open={!!selectedWithdrawal} onOpenChange={() => setSelectedWithdrawal(null)}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
@@ -310,11 +406,11 @@ export function WithdrawalApprovalList() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Status</label>
-                  <Badge
+              <Badge
                     variant={
-                      selectedWithdrawal.status === "pending"
+                      selectedWithdrawal.status === "PENDING"
                         ? "secondary"
-                        : selectedWithdrawal.status === "completed"
+                        : selectedWithdrawal.status === "COMPLETED"
                           ? "default"
                           : "destructive"
                     }
@@ -326,21 +422,38 @@ export function WithdrawalApprovalList() {
                   <label className="text-sm text-muted-foreground">Bank Account</label>
                   <div className="mt-1 p-3 bg-background rounded-lg border border-border">
                     <p className="font-medium text-foreground">
-                      {selectedWithdrawal.method === 'BANK' ? selectedWithdrawal.payout_details?.bank_name : selectedWithdrawal.payout_details?.wallet_provider}
+                      {selectedWithdrawal.method === "BANK"
+                        ? selectedWithdrawal.payout_details?.bank_name
+                        : selectedWithdrawal.payout_details?.wallet_provider}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {selectedWithdrawal.method === 'BANK' ? selectedWithdrawal.payout_details?.account_name : "Wallet ID:"}
+                      {selectedWithdrawal.method === "BANK"
+                        ? selectedWithdrawal.payout_details?.account_name
+                        : "Wallet ID:"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {selectedWithdrawal.method === 'BANK' ? selectedWithdrawal.payout_details?.account_number : selectedWithdrawal.payout_details?.wallet_id}
+                      {selectedWithdrawal.method === "BANK"
+                        ? selectedWithdrawal.payout_details?.account_number
+                        : selectedWithdrawal.payout_details?.wallet_id}
                     </p>
                   </div>
                 </div>
+                {selectedWithdrawal.admin_note && selectedWithdrawal.status !== "PENDING" && (
+                  <div className="col-span-2">
+                    <label className="text-sm text-muted-foreground">Admin Note</label>
+                    <div className="mt-1 p-3 bg-background rounded-lg border border-border text-sm text-foreground whitespace-pre-wrap">
+                      {selectedWithdrawal.admin_note}
+                    </div>
+                  </div>
+                )}
               </div>
-              {selectedWithdrawal.status === "pending" && (
+              {selectedWithdrawal.status === "PENDING" && (
                 <div className="flex gap-2 pt-4">
                   <Button
-                    onClick={() => handleApprove(selectedWithdrawal.id)}
+                    onClick={() => {
+                      setApproveTarget(selectedWithdrawal)
+                      setSelectedWithdrawal(null)
+                    }}
                     disabled={processing === selectedWithdrawal.id}
                     className="flex-1 bg-green-500 hover:bg-green-600"
                   >
@@ -352,9 +465,10 @@ export function WithdrawalApprovalList() {
                     Approve
                   </Button>
                   <Button
-                    onClick={() =>
-                      handleReject(selectedWithdrawal.id, selectedWithdrawal.user_id, selectedWithdrawal.amount_usd)
-                    }
+                    onClick={() => {
+                      setRejectTarget(selectedWithdrawal)
+                      setRejectReason("")
+                    }}
                     disabled={processing === selectedWithdrawal.id}
                     variant="destructive"
                     className="flex-1"
@@ -366,6 +480,115 @@ export function WithdrawalApprovalList() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!approveTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setApproveTarget(null)
+          }
+        }}
+      >
+        <DialogContent className="bg-card border-border max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Approve Withdrawal</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Confirm that you have processed this payout and want to mark it as completed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              {approveTarget?.profiles?.full_name} ({approveTarget?.profiles?.email})
+            </div>
+            <div className="text-sm text-foreground">
+              Amount: <span className="font-semibold">${approveTarget?.amount_usd.toFixed(2)}</span> (≈ MYR {approveTarget?.amount_myr})
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setApproveTarget(null)
+                }}
+                disabled={approveSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (approveTarget) {
+                    handleApprove(approveTarget.id)
+                  }
+                }}
+                disabled={approveSubmitting}
+                className="bg-green-500 hover:bg-green-600"
+              >
+                {approveSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                )}
+                Confirm Approve
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!rejectTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectTarget(null)
+            setRejectReason("")
+          }
+        }}
+      >
+        <DialogContent className="bg-card border-border max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Reject Withdrawal</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Provide a reason for rejecting this withdrawal.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              {rejectTarget?.profiles?.full_name} ({rejectTarget?.profiles?.email})
+            </div>
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Enter rejection reason"
+              className="min-h-[120px] bg-background border-border"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRejectTarget(null)
+                  setRejectReason("")
+                }}
+                disabled={rejectSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (rejectTarget) {
+                    handleReject(rejectTarget.id, rejectReason)
+                  }
+                }}
+                disabled={rejectSubmitting}
+              >
+                {rejectSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <XCircle className="h-4 w-4 mr-2" />
+                )}
+                Confirm Reject
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

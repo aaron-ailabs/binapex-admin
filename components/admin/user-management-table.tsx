@@ -9,26 +9,14 @@ import { useState } from "react"
 import { format } from "date-fns"
 import Link from "next/link"
 import { useLiveData } from "@/hooks/use-live-data"
-
-interface User {
-  id: string
-  email: string
-  full_name: string
-  balance_usd: number
-  bonus_balance: number
-  membership_tier: string
-  role: string
-  kyc_verified: boolean
-  joined_at: string
-  credit_score: number | null
-}
+import { AdminUser } from "@/lib/types/admin"
 
 interface UserManagementTableProps {
-  users: User[]
+  users: AdminUser[]
 }
 
 export function UserManagementTable({ users: initialUsers }: UserManagementTableProps) {
-  // const users = useLiveData<User>("profiles", initialUsers, { column: "created_at", ascending: false }) 
+  // const users = useLiveData<AdminUser>("profiles", initialUsers, { column: "created_at", ascending: false }) 
   // Disable LiveData to ensure consistency with Server Action data.
   const users = initialUsers
   const [searchQuery, setSearchQuery] = useState("")
@@ -68,6 +56,8 @@ export function UserManagementTable({ users: initialUsers }: UserManagementTable
     }
   }
 
+  const isBanned = (user: AdminUser) => user.banned_until && new Date(user.banned_until) > new Date()
+
   return (
     <GlassCard className="p-4 md:p-6">
       <div className="space-y-4">
@@ -95,16 +85,13 @@ export function UserManagementTable({ users: initialUsers }: UserManagementTable
                     Balance
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Credit Score
+                    Status
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
                     Tier
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    KYC
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    Joined
+                    Last Login
                   </th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
                     Actions
@@ -143,14 +130,12 @@ export function UserManagementTable({ users: initialUsers }: UserManagementTable
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      {user.credit_score !== null ? (
-                        <Badge variant="outline" className={getCreditScoreBadge(user.credit_score).color}>
-                          {user.credit_score}
-                        </Badge>
+                      {isBanned(user) ? (
+                        <Badge variant="destructive">Banned</Badge>
+                      ) : user.kyc_verified ? (
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">Active</Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border">
-                          Not Rated
-                        </Badge>
+                        <Badge variant="outline" className="bg-muted text-muted-foreground">Unverified</Badge>
                       )}
                     </td>
                     <td className="py-3 px-4">
@@ -158,21 +143,8 @@ export function UserManagementTable({ users: initialUsers }: UserManagementTable
                         {user.membership_tier}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4">
-                      {user.kyc_verified ? (
-                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                          Verified
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border">
-                          Pending
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="text-sm text-muted-foreground whitespace-nowrap">
-                        {format(new Date(user.joined_at), "MMM dd, yyyy")}
-                      </p>
+                    <td className="py-3 px-4 text-sm text-center">
+                      {user.last_sign_in_at ? format(new Date(user.last_sign_in_at), "MMM d, HH:mm") : "-"}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <Link href={`/admin/users/${user.id}`}>

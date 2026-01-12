@@ -25,10 +25,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     const withdrawalId = params.id
 
-    // Approve withdrawal using the admin function
     const { data, error } = await supabase.rpc("approve_withdrawal", {
-      withdrawal_id: withdrawalId,
-      admin_id: user.id,
+      p_withdrawal_id: withdrawalId,
     })
 
     if (error) {
@@ -37,13 +35,25 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         action: "Admin withdrawal approval",
         metadata: {
           withdrawalId,
-          adminId: user.id
-        }
+          adminId: user.id,
+        },
       })
       return NextResponse.json({ error: error.message || "Failed to approve withdrawal" }, { status: 500 })
     }
 
-    // Log admin action
+    if (!data || data.success !== true) {
+      const message = (data as any)?.error || "Failed to approve withdrawal"
+      const wrappedError = new Error(message)
+      captureApiError(wrappedError, {
+        action: "Admin withdrawal approval",
+        metadata: {
+          withdrawalId,
+          adminId: user.id,
+        },
+      })
+      return NextResponse.json({ error: message }, { status: 400 })
+    }
+
     await supabase.from("admin_logs").insert({
       admin_id: user.id,
       action: "approve_withdrawal",

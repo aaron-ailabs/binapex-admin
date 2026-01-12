@@ -13,11 +13,13 @@ import {
   DollarSign,
   TrendingUp,
   MessageSquare,
+  ThumbsUp,
   AlertTriangle,
   Menu,
   X,
   LogOut,
   ArrowLeft,
+  Settings,
 } from "lucide-react"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -31,7 +33,10 @@ const navigation = [
   { name: "Assets", href: "/admin/assets", icon: TrendingUp },
   { name: "Withdrawals", href: "/admin/withdrawals", icon: DollarSign },
   { name: "Trades", href: "/admin/trades", icon: TrendingUp },
+  { name: "Notifications", href: "/admin/notifications", icon: MessageSquare },
+  { name: "Suggestions", href: "/admin/suggestions", icon: ThumbsUp },
   { name: "Support", href: "/admin/support", icon: MessageSquare },
+  { name: "Settings", href: "/admin/settings", icon: Settings },
 ]
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
