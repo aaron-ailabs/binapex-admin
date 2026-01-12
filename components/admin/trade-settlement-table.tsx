@@ -83,8 +83,9 @@ export function TradeSettlementTable() {
                 return
             }
 
-            const rationale = window.prompt("Enter settlement rationale") || ""
-            const docUrl = window.prompt("Optional: enter supporting document URL") || null
+            // [FIX] Removed administrative prompts per user request
+            const rationale = "Manual settlement by admin"
+            const docUrl = null
 
             const { data, error } = await supabase.rpc('settle_binary_order', {
                 p_order_id: tradeId,
@@ -97,8 +98,14 @@ export function TradeSettlementTable() {
             if (error) throw error
 
             toast.success(`Trade settled as ${outcome}`)
-            fetchTrades() // Refresh list
+
+            // [FIX] Optimistically update local state to prevent "Ongoing" flicker
+            setTrades(prev => prev.filter(t => t.id !== tradeId))
+
+            // Still fetch to ensure everything is in sync
+            await fetchTrades()
         } catch (error: any) {
+            console.error("Settlement error:", error)
             toast.error(`Error: ${error.message}`)
         } finally {
             setProcessingId(null)
