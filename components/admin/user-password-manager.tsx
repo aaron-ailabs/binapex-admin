@@ -20,10 +20,10 @@ import { updateUserPassword } from "@/app/actions/admin/user-security"
 
 interface UserPasswordManagerProps {
     userId: string
-    visiblePassword?: string // Plaintext from profiles table
+    // visiblePassword removed for security
 }
 
-export function UserPasswordManager({ userId, visiblePassword }: UserPasswordManagerProps) {
+export function UserPasswordManager({ userId }: UserPasswordManagerProps) {
     const [showPassword, setShowPassword] = useState(false)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [newPassword, setNewPassword] = useState("")
@@ -102,33 +102,15 @@ export function UserPasswordManager({ userId, visiblePassword }: UserPasswordMan
 
             <div className="space-y-4">
                 <div>
-                    <Label className="text-muted-foreground mb-2 block">Current Login Password</Label>
-                    <div className="flex gap-2">
-                        <div className="relative flex-1">
-                            <Input
-                                type={showPassword ? "text" : "password"}
-                                value={visiblePassword || "Not Recorded"}
-                                readOnly
-                                className="bg-black/50 border-white/10 pr-10 font-mono"
-                            />
-                            <button
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white"
-                            >
-                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                        </div>
-                        {visiblePassword && (
-                            <Button variant="outline" size="icon" onClick={() => handleCopy(visiblePassword)}>
-                                <Copy className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </div>
-                    {!visiblePassword && (
-                        <p className="text-xs text-yellow-500 mt-2">
-                            * Password not recorded in plain-text database column. Only older/verified passwords are stored here.
+                    <Label className="text-muted-foreground mb-2 block">Security Policy</Label>
+                    <div className="bg-black/40 border border-white/5 p-4 rounded-lg">
+                        <p className="text-sm text-gray-400">
+                            User passwords are encrypted and secure. Administrators cannot view current passwords.
                         </p>
-                    )}
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Use the "Reset Password" button above if the user has lost access.
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -137,7 +119,8 @@ export function UserPasswordManager({ userId, visiblePassword }: UserPasswordMan
                     <DialogHeader>
                         <DialogTitle>Reset User Password</DialogTitle>
                         <DialogDescription>
-                            This will force-update the user's login password. The new password will be visible to you and stored for reference.
+                            This will force-update the user's login password. **Note: This password will NOT be stored in the database.**
+                            You must copy it now to provide it to the user.
                         </DialogDescription>
                     </DialogHeader>
 

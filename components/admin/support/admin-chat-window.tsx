@@ -191,12 +191,7 @@ export function AdminChatWindow({ selectedUserId, onBack }: AdminChatWindowProps
   return (
     <div className="flex h-full flex-col bg-[#0a0a0a] min-h-0 relative">
       {/* Wallpaper */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")`,
-          backgroundRepeat: 'repeat'
-        }}
-      />
+      <div className="absolute inset-0 bg-whatsapp-pattern opacity-[0.03]" />
 
       {/* Header */}
       <div className="bg-[#1a1a1a] p-3 px-4 flex items-center justify-between border-b border-[#262626] z-10 w-full">

@@ -25,8 +25,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     const withdrawalId = params.id
 
-    const { data, error } = await supabase.rpc("approve_withdrawal", {
-      p_withdrawal_id: withdrawalId,
+    const { data, error } = await supabase.rpc("approve_withdrawal_atomic", {
+      p_transaction_id: withdrawalId,
     })
 
     if (error) {
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       return NextResponse.json({ error: message }, { status: 400 })
     }
 
-    await supabase.from("admin_logs").insert({
+    await supabase.from("admin_audit_logs").insert({
       admin_id: user.id,
       action: "approve_withdrawal",
       details: { withdrawal_id: withdrawalId },

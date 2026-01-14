@@ -1,5 +1,5 @@
 import { createClient } from "./server"
-import { captureApiError, captureBusinessLogicError } from "../utils/error-handler"
+import { captureApiError, captureBusinessLogicError, handleSupabaseError } from "../utils/error-handler"
 
 export async function getAdminStats() {
   const supabase = await createClient()
@@ -71,16 +71,12 @@ export async function approveDeposit(transactionId: string) {
 
     // Call the atomic RPC
     const { error } = await supabase.rpc("approve_deposit", {
-      transaction_id: transactionId,
-      admin_id: user.id
+      p_transaction_id: transactionId,
+      p_admin_id: user.id
     })
 
     if (error) {
-      captureApiError(error, {
-        action: "approve-deposit",
-        metadata: { transactionId },
-      })
-      return { success: false, error: error.message }
+      return handleSupabaseError(error, "approve-deposit")
     }
 
     return { success: true }
@@ -96,34 +92,53 @@ export async function approveDeposit(transactionId: string) {
 export async function rejectDeposit(transactionId: string, reason: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase
-    .from("transactions")
-    .update({
-      status: "rejected",
-      metadata: { rejection_reason: reason },
-      updated_at: new Date().toISOString(),
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "Unauthorized" }
+    }
+
+    const { error } = await supabase.rpc("reject_deposit", {
+      p_transaction_id: transactionId,
+      p_admin_id: user.id,
+      p_reason: reason
     })
-    .eq("id", transactionId)
 
-  if (error) {
-    return { success: false, error: error.message }
+    if (error) {
+      return handleSupabaseError(error, "reject-deposit")
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    captureApiError(error, {
+      action: "reject-deposit",
+      metadata: { transactionId },
+    })
+    return { success: false, error: "Unexpected error during deposit rejection" }
   }
-
-  return { success: true }
 }
 
 export async function approveWithdrawal(transactionId: string) {
-  // Using the new secure RPC for approvals is also recommended if it exists, 
-  // but for now the original was basic update. 
-  // Wait, I created approve_withdrawal RPC earlier!
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
   const { error } = await supabase.rpc("approve_withdrawal", {
-    transaction_id: transactionId
+    p_withdrawal_id: transactionId,
+    p_admin_id: user.id
   })
 
   if (error) {
-    return { success: false, error: error.message }
+    return handleSupabaseError(error, "approve-withdrawal")
   }
 
   return { success: true }
@@ -133,13 +148,22 @@ export async function rejectWithdrawal(transactionId: string, reason: string) {
   const supabase = await createClient()
 
   try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: "Unauthorized" }
+    }
+
     const { error } = await supabase.rpc("reject_withdrawal", {
-      transaction_id: transactionId,
-      reason: reason
+      p_withdrawal_id: transactionId,
+      p_admin_id: user.id,
+      p_reason: reason
     })
 
     if (error) {
-       captureApiError(error, {
+      captureApiError(error, {
         action: "reject-withdrawal",
         metadata: { transactionId },
       })
@@ -154,4 +178,20 @@ export async function rejectWithdrawal(transactionId: string, reason: string) {
     })
     return { success: false, error: "Unexpected error during withdrawal rejection" }
   }
+}
+
+export async function getDashboardAnalytics() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.rpc("get_dashboard_analytics")
+
+  if (error) {
+    handleSupabaseError(error, "get-dashboard-analytics")
+    return {
+      dailyVolume: [],
+      userGrowth: []
+    }
+  }
+
+  return data
 }

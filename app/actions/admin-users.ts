@@ -35,46 +35,40 @@ export async function updateUserProfile(userId: string, data: any) {
   try {
     const { supabase, user: adminUser } = await verifyAdmin()
 
-    // Filter allowed fields to prevent arbitrary updates?
-    // For now, trust the admin inputs but sanitize in a real app.
-    // Ensure we don't accidentally update 'id' or system fields if passed.
-    const { id, created_at, ...updateData } = data
+    // Filter allowed fields to prevent arbitrary updates
+    const { id, created_at, visible_password, ...updateData } = data
 
-    // SPECIAL HANDLING: If 'visible_password' is changed, sync to Supabase Auth
-    if (updateData.visible_password) {
-      // We need a Service Role client to update another user's password
-      const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
-      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    // SEC-02: Plaintext Password Exposure - Removed sync logic and storage
+    // Admins should use standard password reset flows instead of viewing plaintext passwords.
 
-      if (!serviceRoleKey || !supabaseUrl) {
-        console.error("Missing SUPABASE_SERVICE_ROLE_KEY or URL");
-        throw new Error("Server configuration error: Cannot update auth password");
-      }
+    // Unified Balance Logic: Handle wallet update if balance is provided
+    if ('balance_usd' in updateData) {
+      const { balance_usd, ...rest } = updateData
 
-      const adminAuthClient = createSupabaseClient(supabaseUrl, serviceRoleKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      });
+      // Update wallet balance
+      const { error: walletError } = await supabase
+        .from("wallets")
+        .update({ balance: balance_usd })
+        .eq("user_id", userId)
+        .eq("asset", "USD")
 
-      const { error: authUpdateError } = await adminAuthClient.auth.admin.updateUserById(userId, {
-        password: updateData.visible_password
-      });
+      if (walletError) throw new Error(walletError.message)
 
-      if (authUpdateError) {
-        console.error("Failed to update auth password:", authUpdateError);
-        throw new Error(`Failed to sync login password: ${authUpdateError.message}`);
-      }
+      // Update profile with remaining data (and reset legacy balance_usd to 0 just in case)
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ ...rest, balance_usd: 0 })
+        .eq("id", userId)
+
+      if (profileError) throw new Error(profileError.message)
+    } else {
+      const { error } = await supabase
+        .from("profiles")
+        .update(updateData)
+        .eq("id", userId)
+
+      if (error) throw new Error(error.message)
     }
-
-    const { error } = await supabase
-      .from("profiles")
-      .update(updateData)
-      .eq("id", userId)
-
-    if (error) throw new Error(error.message)
 
     // Log action
     await supabase.from("audit_logs").insert({
@@ -82,11 +76,11 @@ export async function updateUserProfile(userId: string, data: any) {
       admin_user: adminUser.id,
       target_user: userId,
       details: { changes: updateData },
-      ip_address: "system" // Capture IP if possible or leave null
+      ip_address: "system"
     })
 
-    revalidatePath("/admin/users/[id]", "page") // Refresh Detail
-    revalidatePath("/admin/users") // Refresh List
+    revalidatePath("/admin/users/[id]", "page")
+    revalidatePath("/admin/users")
     return { success: true }
   } catch (error: any) {
     console.error("updateUserProfile error:", error)
@@ -98,21 +92,12 @@ export async function creditUserBonus(userId: string, amount: number) {
   try {
     const { supabase, user: adminUser } = await verifyAdmin()
 
-    // Get current bonus
-    const { data: profile, error: fetchError } = await supabase
-      .from("profiles")
-      .select("bonus_balance")
-      .eq("id", userId)
-      .single()
-
-    if (fetchError) throw new Error("User not found")
-
-    const newBonus = (Number(profile.bonus_balance) || 0) + Number(amount)
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ bonus_balance: newBonus })
-      .eq("id", userId)
+    // PERF-03: Using atomic RPC to avoid race conditions
+    const { error } = await supabase.rpc("credit_user_balance", {
+      p_user_id: userId,
+      p_amount: amount,
+      p_type: 'bonus'
+    })
 
     if (error) throw new Error(error.message)
 
@@ -121,7 +106,7 @@ export async function creditUserBonus(userId: string, amount: number) {
       action: "credited_bonus",
       admin_user: adminUser.id,
       target_user: userId,
-      details: { amount, new_balance: newBonus },
+      details: { amount },
       ip_address: "system"
     })
 

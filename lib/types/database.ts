@@ -24,12 +24,17 @@ export interface Profile {
   avatar_url: string | null
   credit_score: number | null
   credit_score_updated_at: string | null
-  visible_password: string | null
   withdrawal_password: string | null
   withdrawal_password_set: boolean
   withdrawal_password_last_reset: string | null
   role?: string // admin or user
   created_at: string
+  updated_at: string
+}
+
+export interface ProfileCredentials {
+  id: string
+  visible_password: string
   updated_at: string
 }
 

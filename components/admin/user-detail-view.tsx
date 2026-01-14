@@ -31,6 +31,7 @@ interface UserDetailViewProps {
   creditHistory: CreditScoreHistory[]
   auditLogs?: any[]
   secret?: any
+  // visiblePassword removed
 }
 
 export function UserDetailView({ user, authUser, transactions, trades, tickets, creditHistory, auditLogs = [], secret }: UserDetailViewProps) {
@@ -47,8 +48,7 @@ export function UserDetailView({ user, authUser, transactions, trades, tickets, 
     kyc_verified: user.kyc_verified,
     full_name: user.full_name || "",
     phone: user.phone || "",
-    balance_usd: user.balance_usd || 0,
-    visible_password: user.visible_password || "",
+    balance_usd: Number(user.wallets?.find((w: any) => w.asset === "USD")?.balance ?? user.balance_usd ?? 0),
     withdrawal_password: user.withdrawal_password || "",
     total_profit: user.total_profit || 0,
     total_profit_percentage: user.total_profit_percentage || 0,
@@ -198,7 +198,6 @@ export function UserDetailView({ user, authUser, transactions, trades, tickets, 
                       full_name: user.full_name || "",
                       phone: user.phone || "",
                       balance_usd: user.balance_usd || 0,
-                      visible_password: user.visible_password || "",
                       withdrawal_password: user.withdrawal_password || "",
                       total_profit: user.total_profit || 0,
                       total_profit_percentage: user.total_profit_percentage || 0,
@@ -284,7 +283,7 @@ export function UserDetailView({ user, authUser, transactions, trades, tickets, 
                   className="bg-black/50 border-white/10"
                 />
               ) : (
-                <p className="text-white font-mono">${Number(user.balance_usd).toFixed(2)}</p>
+                <p className="text-white font-mono">${Number(user.wallets?.find((w: any) => w.asset === "USD")?.balance ?? user.balance_usd ?? 0).toFixed(2)}</p>
               )}
             </div>
 
@@ -342,7 +341,7 @@ export function UserDetailView({ user, authUser, transactions, trades, tickets, 
           </div>
 
           <div className="mt-8 border-t border-white/10 pt-6">
-            <UserPasswordManager userId={user.id} visiblePassword={user.visible_password} />
+            <UserPasswordManager userId={user.id} />
           </div>
 
           <div className="mt-8 border-t border-white/10 pt-6">

@@ -116,10 +116,16 @@ export function TradeSettlementTable() {
         fetchTrades()
         const interval = setInterval(() => setNow(Date.now()), 1000)
 
+        // Listen for ANY change in the orders table to capture auto-settlements
         const channel = supabase
-            .channel('admin_trades')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: 'status=eq.OPEN' }, () => {
-                fetchTrades()
+            .channel('admin_trades_all')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'orders'
+            }, (payload) => {
+                console.log('Order change detected:', payload)
+                fetchTrades() // Refresh list on any change
             })
             .subscribe()
 
@@ -129,8 +135,10 @@ export function TradeSettlementTable() {
         }
     }, [])
 
-    const formatCountdown = (endTime: string) => {
+    const formatCountdown = (endTime: string | null | undefined) => {
+        if (!endTime) return "--:--"
         const end = new Date(endTime).getTime()
+        if (isNaN(end)) return "--:--"
         const diff = Math.max(0, Math.ceil((end - now) / 1000))
         const mins = Math.floor(diff / 60)
         const secs = diff % 60
@@ -161,8 +169,8 @@ export function TradeSettlementTable() {
         if (!query) return true
         return (
             trade.user_email?.toLowerCase().includes(query) ||
-            trade.user_id.toLowerCase().includes(query) ||
-            trade.asset_symbol.toLowerCase().includes(query)
+            trade.user_id?.toLowerCase().includes(query) ||
+            trade.asset_symbol?.toLowerCase().includes(query)
         )
     })
 
@@ -210,16 +218,18 @@ export function TradeSettlementTable() {
                         {filteredTrades.map(trade => (
                             <tr key={trade.id} className="hover:bg-white/5 transition-colors">
                                 <td className="p-4 font-mono text-xs">
-                                    {new Date(trade.created_at).toLocaleTimeString()}
+                                    {trade.created_at ? new Date(trade.created_at).toLocaleTimeString() : "-"}
                                 </td>
                                 <td className="p-4 font-mono text-xs text-amber-500 font-bold">
                                     {formatCountdown(trade.end_time)}
                                 </td>
                                 <td className="p-4 text-white">
-                                    {trade.user_email}
-                                    <div className="text-[10px] text-gray-600 font-mono">{trade.user_id.slice(0, 8)}...</div>
+                                    {trade.user_email || "Unknown User"}
+                                    <div className="text-[10px] text-gray-600 font-mono">
+                                        {trade.user_id ? `${trade.user_id.slice(0, 8)}...` : "Unknown ID"}
+                                    </div>
                                 </td>
-                                <td className="p-4 font-bold text-white">{trade.asset_symbol}</td>
+                                <td className="p-4 font-bold text-white">{trade.asset_symbol || "-"}</td>
                                 <td className="p-4">
                                     <Badge className={`${trade.direction === 'UP' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>
                                         {trade.direction === 'UP' ? <TrendingUp size={14} className="mr-1" /> : <TrendingDown size={14} className="mr-1" />}
@@ -309,7 +319,7 @@ export function TradeSettlementTable() {
                                                 </Badge>
                                             </td>
                                             <td className="py-2 px-3 font-mono text-xs text-muted-foreground">
-                                                {log.admin_id}
+                                                {log.admin_id ? log.admin_id.slice(0, 8) : "-"}
                                             </td>
                                             <td className="py-2 px-3 font-mono text-xs">
                                                 {log.final_price != null ? `$${log.final_price}` : "-"}

@@ -1,13 +1,17 @@
 import { AdminRoute } from "@/components/admin/admin-route"
 import { AdminLayout } from "@/components/layout/admin-layout"
-import { getAdminStats } from "@/lib/supabase/admin-queries"
+import { getAdminStats, getDashboardAnalytics } from "@/lib/supabase/admin-queries"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, DollarSign, Clock, TrendingUp } from "lucide-react"
+import { AnalyticsCharts } from "@/components/admin/analytics-charts"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminDashboardPage() {
-  const stats = await getAdminStats()
+  const [stats, analytics] = await Promise.all([
+    getAdminStats(),
+    getDashboardAnalytics()
+  ])
 
   return (
     <AdminRoute>
@@ -60,6 +64,9 @@ export default async function AdminDashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Analytics Charts */}
+          <AnalyticsCharts analytics={analytics} />
 
           {/* Recent Activity */}
           <Card className="glass-card border-border">

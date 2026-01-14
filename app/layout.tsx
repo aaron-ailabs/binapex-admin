@@ -4,7 +4,8 @@ import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/contexts/auth-context"
-import { ErrorBoundary } from "@/components/error-boundary" // Added import for ErrorBoundary
+import { ErrorBoundary } from "@/components/error-boundary"
+import { GlobalAdminNotificationListener } from "@/components/notifications/global-admin-listener"
 import "./globals.css"
 
 export const dynamic = "force-dynamic"
@@ -59,6 +60,7 @@ export default function RootLayout({
         </ErrorBoundary>
         <Analytics />
         <Toaster position="top-right" />
+        <GlobalAdminNotificationListener />
       </body>
     </html>
   )

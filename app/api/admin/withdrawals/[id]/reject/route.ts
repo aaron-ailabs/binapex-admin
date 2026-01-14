@@ -26,8 +26,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const withdrawalId = params.id
     const { reason } = await request.json()
 
-    const { data, error } = await supabase.rpc("reject_withdrawal", {
-      p_withdrawal_id: withdrawalId,
+    const { data, error } = await supabase.rpc("reject_withdrawal_atomic", {
+      p_transaction_id: withdrawalId,
       p_reason: reason || "Rejected by admin",
     })
 

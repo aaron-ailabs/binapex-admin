@@ -7,6 +7,13 @@ export interface ErrorContext {
   metadata?: Record<string, any>
 }
 
+export interface ServiceResponse<T = any> {
+  success: boolean
+  data?: T
+  error?: string
+  code?: string
+}
+
 export function captureApiError(error: unknown, context: ErrorContext): void {
   const errorMessage = error instanceof Error ? error.message : String(error)
 
@@ -38,4 +45,15 @@ export function captureBusinessLogicError(message: string, context: ErrorContext
   })
 
   console.warn(`[v0] Business logic error:`, message, context.metadata)
+}
+
+export function handleSupabaseError(error: any, action: string): ServiceResponse {
+  // Capture in Sentry/Console
+  captureApiError(error, { action })
+
+  return {
+    success: false,
+    error: error.message || "A database error occurred",
+    code: error.code,
+  }
 }

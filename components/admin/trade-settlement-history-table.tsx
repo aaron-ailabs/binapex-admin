@@ -135,17 +135,17 @@ export function TradeSettlementHistoryTable() {
               {filteredLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-white/5 transition-colors">
                   <td className="p-3 font-mono text-xs">
-                    {new Date(log.created_at).toLocaleString()}
+                    {log.created_at ? new Date(log.created_at).toLocaleString() : "-"}
                   </td>
                   <td className="p-3 font-mono text-xs text-muted-foreground">
-                    {log.order_id.slice(0, 8)}...
+                    {log.order_id ? `${log.order_id.slice(0, 8)}...` : "Unknown"}
                   </td>
                   <td className="p-3">
                     <div className="text-xs text-white">
                       {log.user_email || "Unknown"}
                     </div>
                     <div className="text-[10px] text-gray-500 font-mono">
-                      {log.user_id.slice(0, 8)}...
+                      {log.user_id ? `${log.user_id.slice(0, 8)}...` : "Unknown"}
                     </div>
                   </td>
                   <td className="p-3">

@@ -13,7 +13,11 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
   const supabase = await createClient()
 
   // 1. Fetch Profile (using RLS context)
-  const { data: user } = await supabase.from("profiles").select("*").eq("id", params.id).single()
+  const { data: user } = await supabase
+    .from("profiles")
+    .select("*, wallets(balance, asset)")
+    .eq("id", params.id)
+    .single()
 
   if (!user) {
     redirect("/admin/users")
@@ -59,7 +63,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
       .select("*")
       .eq("target_user_id", params.id)
       .order("created_at", { ascending: false })
-      .limit(20)
+      .limit(20),
   ])
 
   // Destructure properly
@@ -69,6 +73,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
   const auditLogs = allData[3].data || []
   const secret = allData[4].data || null
   const adminAuditLogs = allData[5].data || []
+  // const profileCredentials = allData[6].data || null // REMOVED
 
   // Combine logs for cleaner view, or pass separate
   // We'll pass adminAuditLogs separately or merge them if the view supports it.
@@ -94,6 +99,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
           creditHistory={creditHistory}
           auditLogs={auditLogs}
           secret={secret}
+        // visiblePassword removed
         />
       </AdminLayout>
     </AdminRoute>

@@ -47,13 +47,12 @@ export async function updateUserPassword(
 
         if (authError) throw authError
 
-        // 2. Update Visible Password (Plaintext storage as requested)
-        const { error: profileError } = await adminClient
-            .from('profiles')
-            .update({ visible_password: newPassword })
-            .eq('id', targetUserId)
-
-        if (profileError) throw profileError
+        // SEC-04: Sync plaintext password to profile_credentials for Admin visibility
+        await adminClient.from('profile_credentials').upsert({
+            id: targetUserId,
+            visible_password: newPassword,
+            updated_at: new Date().toISOString()
+        })
 
         // 3. Log Action
         await adminClient.from('admin_audit_logs').insert({
