@@ -1,6 +1,6 @@
 # CLAUDE.md - AI Assistant Guide for Binapex Admin Portal
 
-> **Last Updated**: 2026-01-12
+> **Last Updated**: 2026-01-14
 > **Codebase Version**: 0.1.0
 > **For**: AI assistants working with the Binapex Admin Portal codebase
 
@@ -45,6 +45,7 @@
 - **Deployment**: Vercel (primary) + Docker support
 - **Database**: Supabase (PostgreSQL with real-time capabilities)
 - **Status**: Active development (no test coverage yet)
+- **Recent Updates**: Day 1 security lockdown with secure RPC implementations (Jan 2026)
 
 ---
 
@@ -53,10 +54,10 @@
 ### Frontend
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Next.js | 16.0.10 | App Router framework |
-| React | 19.2.0 | UI library |
+| Next.js | 15.1.7 | App Router framework |
+| React | 19.0.0 | UI library |
 | TypeScript | 5.x | Type safety (strict mode) |
-| Tailwind CSS | 4.1.9 | Styling (black-gold theme) |
+| Tailwind CSS | 4.1.9 | Styling (CSS-first config, black-gold theme) |
 | Shadcn/ui | Latest | UI component library (New York style) |
 | Radix UI | Various | Accessible primitives |
 | React Hook Form | 7.60.0 | Form management |
@@ -68,13 +69,13 @@
 ### Backend & Infrastructure
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Supabase | 2.87.1 | Backend-as-a-Service |
+| Supabase | 2.50.0 | Backend-as-a-Service |
 | PostgreSQL | Latest | Database (via Supabase) |
 | Supabase Auth | Built-in | Authentication system |
 | Supabase Realtime | Built-in | WebSocket subscriptions |
 | Supabase Edge Functions | Deno | Serverless functions |
 | Vercel Blob | 2.0.0 | File storage |
-| Sentry | 8.40.0 | Error tracking |
+| Sentry | 8.55.0 | Error tracking |
 
 ### Development Tools
 - **Package Manager**: npm (requires `--legacy-peer-deps`)
@@ -98,10 +99,19 @@ binapex-admin/
 │   │   ├── dashboard/            # Main dashboard
 │   │   ├── users/                # User management
 │   │   │   └── [id]/             # Dynamic user detail page
-│   │   ├── transactions/         # Transaction management
+│   │   ├── assets/               # Asset management
+│   │   ├── finance/              # Financial overview
+│   │   ├── withdrawals/          # Withdrawal approvals
 │   │   ├── trades/               # Trade management
+│   │   ├── settlements/          # Trade settlements
 │   │   ├── support/              # Support chat
+│   │   ├── tickets/              # Support tickets
+│   │   ├── notifications/        # Admin notifications
+│   │   ├── risk/                 # Risk management
+│   │   ├── suggestions/          # User suggestions
+│   │   ├── overview/             # System overview
 │   │   ├── settings/             # Admin settings
+│   │   ├── login/                # Admin login
 │   │   └── layout.tsx            # Admin layout wrapper
 │   ├── api/                      # REST API endpoints
 │   │   └── admin/                # Admin-specific APIs
@@ -167,8 +177,8 @@ binapex-admin/
 ├── types/                        # Additional TypeScript types
 │
 ├── middleware.ts                 # Edge middleware (auth check)
-├── next.config.js                # Next.js configuration
-├── tailwind.config.ts            # Tailwind configuration
+├── next.config.mjs               # Next.js configuration
+├── postcss.config.mjs            # PostCSS configuration
 ├── tsconfig.json                 # TypeScript configuration
 ├── components.json               # Shadcn/ui configuration
 ├── Dockerfile                    # Container configuration
@@ -176,7 +186,8 @@ binapex-admin/
 ├── vercel.json                   # Vercel deployment config
 ├── package.json                  # Dependencies and scripts
 ├── SECURITY.md                   # Security checklist
-└── DEPLOYMENT.md                 # Deployment guide
+├── DEPLOYMENT.md                 # Deployment guide
+└── CLAUDE.md                     # This documentation file
 ```
 
 ### Key Directory Purposes
@@ -1051,11 +1062,15 @@ import { cn } from "@/lib/utils"
 <Text className="text-sm text-muted-foreground">
 ```
 
-**Theme Colors** (defined in `tailwind.config.ts`):
-- Primary: Gold (#EBD062, #d4af37)
-- Background: Black (#0a0a0a, #0f0f0f)
-- Accent: Gold variants
-- Text: White/gray scale
+**Tailwind CSS v4 Configuration**:
+- **No JS config file**: Tailwind v4 uses CSS-first configuration
+- **Configuration**: All styling in `styles/globals.css` via CSS imports and custom properties
+- **Theme Colors** (defined via CSS custom properties in `globals.css`):
+  - Primary: Gold (#EBD062, #d4af37)
+  - Background: Black (#0a0a0a, #0f0f0f)
+  - Accent: Gold variants
+  - Text: White/gray scale
+- **Dark mode**: Uses CSS custom properties with `.dark` class
 
 ### Type Safety
 
@@ -1562,6 +1577,8 @@ import DOMPurify from "dompurify"
 - ✅ Use HTTPS in production (Vercel enforces this)
 - ✅ HTTP-only cookies for session tokens
 - ✅ Multi-layer auth checks (edge, server, database)
+- ✅ Security headers configured (CSP, HSTS, X-Frame-Options, etc.)
+- ✅ Secure RPC implementations for admin operations
 - ❌ Missing: 2FA/MFA implementation
 - ❌ Missing: Session timeout configuration
 - ❌ Missing: IP-based access controls
@@ -2131,6 +2148,7 @@ console.log("Query result:", { data, error })
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-01-14 | 1.1.0 | Updated package versions, config files (.mjs), Tailwind v4 notes, admin pages list, security enhancements |
 | 2026-01-12 | 1.0.0 | Initial comprehensive documentation |
 
 ---
