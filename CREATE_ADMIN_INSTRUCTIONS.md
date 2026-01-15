@@ -8,7 +8,7 @@
    - Go to `https://your-app-url.vercel.app/signup`
    - Register with:
      - Email: `admin.01@binapex.my`
-     - Password: `Admin@2024!`
+     - Password: `[REDACTED_FOR_SECURITY]`
      - Full Name: `Admin User`
    - Verify your email if required
 
@@ -41,7 +41,7 @@ WHERE email = 'admin.01@binapex.my';
    - Click "Add User"
    - Enter:
      - Email: `admin.01@binapex.my`
-     - Password: `Admin@2024!`
+     - Password: `[REDACTED_FOR_SECURITY]`
      - Auto Confirm User: ✓ (checked)
 
 3. **Set Admin Role:**
@@ -76,7 +76,7 @@ After creating the admin user, verify access by:
 
 1. **Login:**
    - Email: `admin.01@binapex.my`
-   - Password: `Admin@2024!`
+   - Password: `[REDACTED_FOR_SECURITY]`
 
 2. **Test Admin Routes:**
    - Navigate to `/admin` - should see admin dashboard

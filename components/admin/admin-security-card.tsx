@@ -4,7 +4,7 @@ import { useState } from "react"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Eye, RotateCcw, Lock, Unlock } from "lucide-react"
+import { RotateCcw, Lock, Unlock } from "lucide-react"
 import type { Profile } from "@/lib/types/database"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
@@ -22,7 +22,6 @@ import { Input } from "@/components/ui/input"
 interface AdminSecurityCardProps {
     user: Profile
     secret?: {
-        password_plaintext: string
         failed_attempts: number
         is_locked: boolean
     } | null
@@ -30,25 +29,8 @@ interface AdminSecurityCardProps {
 
 export function AdminSecurityCard({ user, secret }: AdminSecurityCardProps) {
     const supabase = createClient()
-    const [viewPasswordOpen, setViewPasswordOpen] = useState(false)
-    const [retrievedPassword, setRetrievedPassword] = useState<string | null>(null)
     const [resetDialogOpen, setResetDialogOpen] = useState(false)
     const [newPassword, setNewPassword] = useState("")
-
-    const handleViewPassword = async () => {
-        try {
-            const { data, error } = await supabase.rpc('admin_view_user_password', {
-                target_uid: user.id
-            })
-
-            if (error) throw error
-
-            setRetrievedPassword(data)
-            setViewPasswordOpen(true)
-        } catch (error: any) {
-            toast.error(error.message || "Failed to retrieve password")
-        }
-    }
 
     const handleResetPassword = async () => {
         if (!newPassword || newPassword.length < 6) {
@@ -97,16 +79,7 @@ export function AdminSecurityCard({ user, secret }: AdminSecurityCardProps) {
                 )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <Button
-                    variant="outline"
-                    className="border-white/10 hover:bg-white/5"
-                    onClick={handleViewPassword}
-                >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Password
-                </Button>
-
+            <div className="grid grid-cols-1 gap-4">
                 <Button
                     variant="outline"
                     className="border-white/10 bg-white/5 hover:bg-white/10 text-[#F59E0B]"
@@ -116,25 +89,6 @@ export function AdminSecurityCard({ user, secret }: AdminSecurityCardProps) {
                     Reset & Unlock
                 </Button>
             </div>
-
-            {/* View Password Dialog */}
-            <Dialog open={viewPasswordOpen} onOpenChange={setViewPasswordOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Withdrawal Password</DialogTitle>
-                        <DialogDescription>
-                            This action has been logged in the admin audit trail.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4 flex justify-center">
-                        <div className="bg-muted p-4 rounded-lg border text-center min-w-[200px]">
-                            <p className="text-2xl font-mono font-bold tracking-widest">
-                                {retrievedPassword}
-                            </p>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
 
             {/* Reset Password Dialog */}
             <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>

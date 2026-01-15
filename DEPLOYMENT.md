@@ -6,8 +6,8 @@
 2. Supabase project (with all migrations applied)
 3. Domain name (optional: binapex.com)
 4. API Keys:
-   - CoinGecko: `CG-UGQ7V2q7G5cgYKpEpFVe9w1H`
-   - Alpha Vantage: `2GGYYA6ZN9L437PT`
+   - CoinGecko: set via Supabase secrets
+   - Alpha Vantage: set via Supabase secrets
 
 ## Step 1: Database Setup
 
@@ -52,8 +52,8 @@ npm install -g supabase
 supabase login
 
 # Set secrets
-supabase secrets set COINGECKO_API_KEY=CG-UGQ7V2q7G5cgYKpEpFVe9w1H
-supabase secrets set ALPHA_VANTAGE_API_KEY=2GGYYA6ZN9L437PT
+supabase secrets set COINGECKO_API_KEY=<YOUR_COINGECKO_API_KEY>
+supabase secrets set ALPHA_VANTAGE_API_KEY=<YOUR_ALPHA_VANTAGE_API_KEY>
 
 # Deploy functions
 supabase functions deploy market-data-cron

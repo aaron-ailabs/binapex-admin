@@ -2,7 +2,7 @@
 
 ## Admin Credentials
 - **Email:** admin.01@binapex.my
-- **Password:** Admin@2024!
+- **Password:** [REDACTED_FOR_SECURITY]
 
 ---
 
@@ -36,7 +36,7 @@ The function will:
 
 2. Sign up with:
    - Email: `admin.01@binapex.my`
-   - Password: `Admin@2024!`
+   - Password: `[REDACTED_FOR_SECURITY]`
    - Full Name: `System Administrator`
 
 3. After signup, run the SQL script in Supabase SQL Editor:
@@ -57,7 +57,7 @@ The function will:
 
 2. Create new user:
    - Email: `admin.01@binapex.my`
-   - Password: `Admin@2024!`
+   - Password: `[REDACTED_FOR_SECURITY]`
    - Auto Confirm User: ✓
 
 3. Go to: Database → Table Editor → profiles

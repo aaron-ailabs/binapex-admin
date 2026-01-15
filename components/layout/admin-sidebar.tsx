@@ -42,7 +42,18 @@ import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 // Navigation Config
-const navMain = [
+interface NavItem {
+    title: string
+    url: string
+    icon: any
+    isActive?: boolean
+    items?: {
+        title: string
+        url: string
+    }[]
+}
+
+const navMain: NavItem[] = [
     {
         title: "Overview",
         url: "/admin/overview",
@@ -96,7 +107,7 @@ const navMain = [
     },
 ]
 
-const navSecondary = [] // Emptying secondary as we moved Settings up or if we want to keep it separate we can. 
+const navSecondary: NavItem[] = [] // Emptying secondary as we moved Settings up or if we want to keep it separate we can. 
 // BUT looking at the image "Old Admin UI", Settings is at the bottom. 
 // The Image 1 (New) has Settings at bottom. Image 2 (Old) has Settings at bottom of list.
 // I will keep Settings in navSecondary to separate it at the bottom if desired, OR put it in navMain.
@@ -161,7 +172,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
                                         <SidebarMenuSub>
-                                            {item.items.map((subItem) => (
+                                            {item.items?.map((subItem) => (
                                                 <SidebarMenuSubItem key={subItem.title}>
                                                     <SidebarMenuSubButton asChild isActive={pathname === subItem.url} className="hover:text-primary">
                                                         <Link href={subItem.url}>

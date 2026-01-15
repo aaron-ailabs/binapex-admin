@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { StatCard } from "@/components/admin/stat-card"
-import { Users, DollarSign, Activity, AlertTriangle, ArrowRight } from "lucide-react"
+import { Users, DollarSign, Activity, AlertTriangle, ArrowRight, MessageSquare } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

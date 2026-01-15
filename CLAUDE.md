@@ -7,6 +7,7 @@
 ---
 
 ## Table of Contents
+
 1. [Project Overview](#project-overview)
 2. [Technology Stack](#technology-stack)
 3. [Codebase Structure](#codebase-structure)
@@ -32,6 +33,7 @@
 - **Admin Portal**: Complete management system (this repository)
 
 ### Key Features
+
 - Real-time trading dashboard
 - User management with tier-based benefits
 - Financial transaction processing (deposits/withdrawals)
@@ -41,6 +43,7 @@
 - Multi-asset wallet management
 
 ### Project Type
+
 - **Nature**: Monolithic Next.js admin application
 - **Deployment**: Vercel (primary) + Docker support
 - **Database**: Supabase (PostgreSQL with real-time capabilities)
@@ -52,6 +55,7 @@
 ## Technology Stack
 
 ### Frontend
+
 | Technology | Version | Purpose |
 |------------|---------|---------|
 | Next.js | 15.1.7 | App Router framework |
@@ -67,6 +71,7 @@
 | Sonner | 1.7.4 | Toast notifications |
 
 ### Backend & Infrastructure
+
 | Technology | Version | Purpose |
 |------------|---------|---------|
 | Supabase | 2.50.0 | Backend-as-a-Service |
@@ -78,6 +83,7 @@
 | Sentry | 8.55.0 | Error tracking |
 
 ### Development Tools
+
 - **Package Manager**: npm (requires `--legacy-peer-deps`)
 - **Linting**: ESLint 8.57.0 (max warnings: 0)
 - **Build**: Next.js standalone output
@@ -208,6 +214,7 @@ binapex-admin/
 **Type**: Server-first monolithic Next.js application
 
 **Key Architectural Decisions**:
+
 1. **Server Components First**: Heavy use of React Server Components for data fetching
 2. **No Traditional ORM**: Direct Supabase client queries instead of Prisma/TypeORM
 3. **Server Actions for Mutations**: All data modifications use Next.js Server Actions
@@ -218,6 +225,7 @@ binapex-admin/
 ### Data Fetching Patterns
 
 #### Server Components (Preferred)
+
 ```typescript
 // app/admin/users/page.tsx
 import { createClient } from "@/lib/supabase/server"
@@ -240,6 +248,7 @@ export const dynamic = "force-dynamic"
 ```
 
 #### Client Components (When Needed)
+
 ```typescript
 // components/admin/RealtimeStats.tsx
 "use client"
@@ -420,6 +429,7 @@ return () => { channel.unsubscribe() }
 ### Core Tables Overview
 
 **User Management**
+
 ```sql
 -- auth.users (Supabase managed)
 -- Extended profile information
@@ -452,6 +462,7 @@ credit_score_history (
 ```
 
 **Financial System**
+
 ```sql
 -- Multi-asset wallets
 wallets (
@@ -501,6 +512,7 @@ platform_bank_accounts (
 ```
 
 **Trading System**
+
 ```sql
 -- Tradable assets
 assets (
@@ -551,6 +563,7 @@ settlements (
 ```
 
 **Support System**
+
 ```sql
 -- WhatsApp-style support messages
 support_messages (
@@ -590,12 +603,14 @@ audit_logs (
 ### Key Database Patterns
 
 **Row Level Security (RLS)**
+
 - Every table has RLS enabled
 - Users can only access their own data
 - Admins can access all data (checked via `auth.uid()` role)
 - Service role bypasses RLS for admin operations
 
 **PostgreSQL Functions (RPC)**
+
 ```sql
 -- Key functions used throughout the app
 get_user_role() → TEXT  -- Returns 'admin' or 'trader'
@@ -606,12 +621,14 @@ get_settlement_logs(user_id UUID) → SETOF settlements  -- Audit trail
 ```
 
 **Triggers**
+
 - Auto-update `updated_at` timestamps
 - Create notifications on transaction status changes
 - Update wallet balances on trade settlements
 - Maintain audit trails automatically
 
 **Decimal Precision**
+
 - Financial amounts: `DECIMAL(20,8)` (standard precision)
 - Large balances: `DECIMAL(28,10)` (extended precision)
 - Percentages: `DECIMAL(5,4)` (0.01% precision)
@@ -636,6 +653,7 @@ Defined in `/lib/constants/tiers.ts`:
 ### Authentication Layers
 
 **1. Edge Middleware** (`/middleware.ts`)
+
 ```typescript
 // Runs on EVERY request at the edge
 export async function middleware(request: NextRequest) {
@@ -648,6 +666,7 @@ export async function middleware(request: NextRequest) {
 ```
 
 **2. Server-Side Auth Check** (AdminRoute component)
+
 ```typescript
 // Wraps admin pages
 <AdminRoute>
@@ -659,6 +678,7 @@ export async function middleware(request: NextRequest) {
 ```
 
 **3. Server Action Verification**
+
 ```typescript
 // Every mutation verifies admin access
 async function verifyAdmin() {
@@ -675,6 +695,7 @@ async function verifyAdmin() {
 ```
 
 **4. Database RLS**
+
 ```sql
 -- Example policy
 CREATE POLICY "Admins can view all profiles"
@@ -695,12 +716,14 @@ USING (
 **Default**: New users are `trader`
 
 **Admin Creation**:
+
 ```sql
 -- Manual SQL update (requires direct DB access)
 UPDATE profiles SET role = 'admin' WHERE email = 'admin@example.com';
 ```
 
 **Role Caching**:
+
 - Middleware: 1-minute cache
 - Client Context: 5-minute cache
 - Reduces database queries
@@ -708,6 +731,7 @@ UPDATE profiles SET role = 'admin' WHERE email = 'admin@example.com';
 ### Special Security Features
 
 **Withdrawal Password**
+
 ```typescript
 // Separate password for withdrawals (hashed with bcrypt)
 import bcrypt from "bcrypt"
@@ -730,6 +754,7 @@ const valid = await bcrypt.compare(inputPassword, profile.withdrawal_password)
 ```
 
 **Credit Score System**
+
 - Admin-managed trust score (0-100)
 - Affects withdrawal approval priority
 - Audit trail in `credit_score_history` table
@@ -1046,6 +1071,7 @@ export async function updateUserProfile(userId: string, data: unknown) {
 ### Styling Conventions
 
 **Tailwind Classes**:
+
 ```typescript
 // Use cn() utility for conditional classes
 import { cn } from "@/lib/utils"
@@ -1063,6 +1089,7 @@ import { cn } from "@/lib/utils"
 ```
 
 **Tailwind CSS v4 Configuration**:
+
 - **No JS config file**: Tailwind v4 uses CSS-first configuration
 - **Configuration**: All styling in `styles/globals.css` via CSS imports and custom properties
 - **Theme Colors** (defined via CSS custom properties in `globals.css`):
@@ -1498,6 +1525,7 @@ const { error } = await supabase
 ### Security Best Practices
 
 **Environment Variables**
+
 ```bash
 # NEVER commit these files
 .env
@@ -1510,6 +1538,7 @@ BLOB_READ_WRITE_TOKEN=...       # Never in client code
 ```
 
 **Row Level Security**
+
 ```sql
 -- Always enable RLS
 ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;
@@ -1528,6 +1557,7 @@ CREATE POLICY "Admins can view all data" ON profiles
 ```
 
 **Input Validation**
+
 ```typescript
 // ALWAYS validate user input with Zod
 import { z } from "zod"
@@ -1542,6 +1572,7 @@ const validData = schema.parse(userInput)
 ```
 
 **SQL Injection Prevention**
+
 ```typescript
 // ✅ SAFE: Parameterized queries (Supabase does this)
 await supabase
@@ -1556,6 +1587,7 @@ await supabase.rpc("raw_query", {
 ```
 
 **XSS Prevention**
+
 ```typescript
 // React automatically escapes JSX
 <div>{userInput}</div>  // ✅ Safe
@@ -1569,11 +1601,13 @@ import DOMPurify from "dompurify"
 ```
 
 **CSRF Protection**
+
 - Next.js Server Actions have built-in CSRF protection
 - Always use POST/PUT/DELETE for mutations (never GET)
 - Validate origin header for API routes
 
 **Authentication Checklist**
+
 - ✅ Use HTTPS in production (Vercel enforces this)
 - ✅ HTTP-only cookies for session tokens
 - ✅ Multi-layer auth checks (edge, server, database)
@@ -1584,6 +1618,7 @@ import DOMPurify from "dompurify"
 - ❌ Missing: IP-based access controls
 
 **Audit Logging**
+
 ```typescript
 // ALWAYS log admin actions
 await supabase.from("audit_logs").insert({
@@ -1609,12 +1644,14 @@ await supabase.from("audit_logs").insert({
 ### Recommended Testing Setup
 
 **1. Install Testing Libraries**
+
 ```bash
 npm install --save-dev vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event
 npm install --save-dev @playwright/test  # For E2E tests
 ```
 
 **2. Configure Vitest**
+
 ```typescript
 // vitest.config.ts
 import { defineConfig } from "vitest/config"
@@ -1637,6 +1674,7 @@ export default defineConfig({
 ```
 
 **3. Unit Testing Pattern**
+
 ```typescript
 // __tests__/lib/utils.test.ts
 import { describe, it, expect } from "vitest"
@@ -1654,6 +1692,7 @@ describe("formatCurrency", () => {
 ```
 
 **4. Component Testing Pattern**
+
 ```typescript
 // __tests__/components/UserCard.test.tsx
 import { render, screen } from "@testing-library/react"
@@ -1676,6 +1715,7 @@ describe("UserCard", () => {
 ```
 
 **5. API Testing Pattern**
+
 ```typescript
 // __tests__/app/api/admin/users.test.ts
 import { describe, it, expect, vi } from "vitest"
@@ -1702,6 +1742,7 @@ describe("/api/admin/users", () => {
 ```
 
 **6. E2E Testing Pattern**
+
 ```typescript
 // e2e/admin-login.spec.ts
 import { test, expect } from "@playwright/test"
@@ -1724,6 +1765,7 @@ test("admin can login and view dashboard", async ({ page }) => {
 ```
 
 **7. Test Scripts in package.json**
+
 ```json
 {
   "scripts": {
@@ -1767,11 +1809,13 @@ test("admin can login and view dashboard", async ({ page }) => {
 ### Vercel Deployment (Recommended)
 
 **Prerequisites**:
+
 - Vercel account
 - GitHub repository connected
 - Environment variables configured
 
 **Automatic Deployment** (on push to main):
+
 ```bash
 # 1. Push to main branch
 git push origin main
@@ -1787,6 +1831,7 @@ git push origin main
 ```
 
 **Manual Deployment**:
+
 ```bash
 # Install Vercel CLI
 npm install -g vercel
@@ -1802,8 +1847,10 @@ vercel --prod
 ```
 
 **Environment Variables in Vercel**:
+
 1. Go to Project Settings → Environment Variables
 2. Add all variables from `.env.local`:
+
    ```
    NEXT_PUBLIC_SUPABASE_URL
    NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -1815,12 +1862,14 @@ vercel --prod
    NEXT_PUBLIC_TAWK_PROPERTY_ID (optional)
    NEXT_PUBLIC_TAWK_WIDGET_ID (optional)
    ```
+
 3. Set environment: Production, Preview, Development
 4. Save and redeploy
 
 ### Docker Deployment
 
 **Build Image**:
+
 ```bash
 # Build production image
 docker build -t binapex-admin .
@@ -1830,6 +1879,7 @@ docker-compose build
 ```
 
 **Run Container**:
+
 ```bash
 # Run with docker
 docker run -p 3000:3000 \
@@ -1843,6 +1893,7 @@ docker-compose up -d
 ```
 
 **Docker Compose** (production):
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -1865,6 +1916,7 @@ services:
 ### Database Migrations
 
 **Apply Migrations to Production**:
+
 ```bash
 # Using Supabase CLI
 supabase login
@@ -1893,17 +1945,20 @@ supabase db push
 ### Monitoring
 
 **Vercel Dashboard**:
+
 - Real-time logs
 - Function execution logs
 - Error tracking
 - Performance metrics
 
 **Sentry**:
+
 - Error tracking
 - Performance monitoring
 - Release tracking
 
 **Supabase Dashboard**:
+
 - Database performance
 - API usage
 - Auth metrics
@@ -1920,11 +1975,13 @@ supabase db push
 **Symptoms**: Redirected to login or see "Unauthorized" message
 
 **Causes**:
+
 - User role is not "admin" in database
 - Session expired
 - Role cache outdated
 
 **Solutions**:
+
 ```sql
 -- Check user role
 SELECT id, email, role FROM profiles WHERE email = 'your-email@example.com';
@@ -1940,11 +1997,13 @@ UPDATE profiles SET role = 'admin' WHERE email = 'your-email@example.com';
 **Symptoms**: Build fails on Vercel
 
 **Causes**:
+
 - TypeScript errors (build errors ignored locally)
 - Missing environment variables
 - Dependency issues
 
 **Solutions**:
+
 ```bash
 # Test build locally
 npm run build
@@ -1961,11 +2020,13 @@ npm run lint
 **Symptoms**: Dashboard stats don't update automatically
 
 **Causes**:
+
 - Supabase Realtime not enabled for table
 - Subscription not properly cleaned up
 - Browser tab throttled
 
 **Solutions**:
+
 ```sql
 -- Enable Realtime for table (in Supabase Dashboard)
 ALTER TABLE table_name REPLICA IDENTITY FULL;
@@ -1993,6 +2054,7 @@ useEffect(() => {
 **Cause**: React 19 not fully supported by all libraries
 
 **Solution**:
+
 ```bash
 # Always use legacy peer deps flag
 npm install --legacy-peer-deps
@@ -2006,11 +2068,13 @@ echo "legacy-peer-deps=true" > .npmrc
 **Symptoms**: "Failed to connect to database" errors
 
 **Causes**:
+
 - Wrong connection string
 - IP restrictions on Supabase
 - Connection pool exhausted
 
 **Solutions**:
+
 ```bash
 # Test connection string
 psql "postgresql://..."
@@ -2029,6 +2093,7 @@ psql "postgresql://..."
 **Cause**: Middleware matcher pattern excludes route
 
 **Solution**:
+
 ```typescript
 // Check middleware.ts config
 export const config = {
@@ -2045,11 +2110,13 @@ export const config = {
 **Symptoms**: "Server Action failed" errors
 
 **Causes**:
+
 - Missing `"use server"` directive
 - Return value not serializable
 - Error not caught
 
 **Solutions**:
+
 ```typescript
 // Ensure "use server" at top
 "use server"
@@ -2069,6 +2136,7 @@ try {
 ### Debugging Tips
 
 **Enable Verbose Logging**:
+
 ```typescript
 // Add to lib/supabase/server.ts
 const supabase = createServerClient(url, key, {
@@ -2079,6 +2147,7 @@ const supabase = createServerClient(url, key, {
 ```
 
 **Check Browser Console**:
+
 ```bash
 # Look for:
 # - Network errors (401, 403, 500)
@@ -2088,6 +2157,7 @@ const supabase = createServerClient(url, key, {
 ```
 
 **Check Vercel Logs**:
+
 ```bash
 # View real-time logs
 vercel logs --follow
@@ -2097,6 +2167,7 @@ vercel logs <deployment-url>
 ```
 
 **Check Sentry**:
+
 ```bash
 # Look for:
 # - Unhandled errors
@@ -2105,6 +2176,7 @@ vercel logs <deployment-url>
 ```
 
 **Database Query Debugging**:
+
 ```typescript
 // Log Supabase queries
 const { data, error } = await supabase
@@ -2123,13 +2195,13 @@ console.log("Query result:", { data, error })
 
 ### Documentation Links
 
-- **Next.js**: https://nextjs.org/docs
-- **React**: https://react.dev
-- **Supabase**: https://supabase.com/docs
-- **Shadcn/ui**: https://ui.shadcn.com
-- **Tailwind CSS**: https://tailwindcss.com/docs
-- **Zod**: https://zod.dev
-- **React Hook Form**: https://react-hook-form.com
+- **Next.js**: <https://nextjs.org/docs>
+- **React**: <https://react.dev>
+- **Supabase**: <https://supabase.com/docs>
+- **Shadcn/ui**: <https://ui.shadcn.com>
+- **Tailwind CSS**: <https://tailwindcss.com/docs>
+- **Zod**: <https://zod.dev>
+- **React Hook Form**: <https://react-hook-form.com>
 
 ### Project-Specific Docs
 

@@ -44,8 +44,8 @@
 
 ```bash
 # Set secrets
-supabase secrets set COINGECKO_API_KEY=CG-UGQ7V2q7G5cgYKpEpFVe9w1H
-supabase secrets set ALPHA_VANTAGE_API_KEY=2GGYYA6ZN9L437PT
+supabase secrets set COINGECKO_API_KEY=<YOUR_COINGECKO_API_KEY>
+supabase secrets set ALPHA_VANTAGE_API_KEY=<YOUR_ALPHA_VANTAGE_API_KEY>
 
 # Deploy all functions
 supabase functions deploy market-data-cron

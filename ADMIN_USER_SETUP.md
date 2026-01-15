@@ -8,7 +8,7 @@
 4. Click **"Create a new user"** button
 5. Fill in:
    - **Email**: `admin@binapex.my`
-   - **Password**: `Admin@2024!`
+   - **Password**: `[REDACTED_FOR_SECURITY]`
    - Toggle **"Auto Confirm User"** ON
 6. Click **"Create User"**
 7. The user is now created in auth.users
@@ -26,7 +26,7 @@ WHERE email = 'admin@binapex.my';
 1. Go to your Binapex app at `/signup`
 2. Sign up with:
    - **Email**: `admin@binapex.my`
-   - **Password**: `Admin@2024!`
+   - **Password**: `[REDACTED_FOR_SECURITY]`
 3. Confirm your email if needed
 4. Then run the SQL command above to promote the user to admin
 
@@ -48,5 +48,5 @@ SELECT id, email, role FROM public.profiles WHERE email = 'admin@binapex.my';
 
 Login with:
 - **Email**: `admin@binapex.my`
-- **Password**: `Admin@2024!`
+- **Password**: `[REDACTED_FOR_SECURITY]`
 - Navigate to `/admin` - you should have full admin access

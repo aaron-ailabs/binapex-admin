@@ -3,7 +3,7 @@
 ## Admin Credentials
 
 - **Email:** `admin.01@binapex.my`
-- **Password:** `Admin@2024!`
+- **Password:** `[REDACTED_FOR_SECURITY]`
 
 ## Step-by-Step Setup Instructions
 
@@ -17,7 +17,7 @@ You have THREE options:
 2. Click "Sign Up" 
 3. Fill in the form with:
    - Email: `admin.01@binapex.my`
-   - Password: `Admin@2024!` (must contain uppercase, lowercase, number, special character)
+   - Password: `[REDACTED_FOR_SECURITY]` (must contain uppercase, lowercase, number, special character)
    - Other required fields
 4. Complete the signup
 5. Go to your Supabase Dashboard → SQL Editor
@@ -39,7 +39,7 @@ WHERE email = 'admin.01@binapex.my';
 2. Click "Add User"
 3. Fill in:
    - Email: `admin.01@binapex.my`
-   - Password: `Admin@2024!`
+   - Password: `[REDACTED_FOR_SECURITY]`
    - Check "Auto confirm user"
 4. Click "Create"
 5. Copy the user ID from the newly created user
@@ -59,7 +59,7 @@ Replace `{USER_ID}` with the actual user ID.
 3. You'll be redirected to `/admin/login`
 4. Enter credentials:
    - Email: `admin.01@binapex.my`
-   - Password: `Admin@2024!`
+   - Password: `[REDACTED_FOR_SECURITY]`
 5. Click "Access Control Panel"
 
 ### Step 3: Access Admin Features
