@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { rateLimitMiddleware } from "@/lib/middleware/rate-limit"
 
 const NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -31,6 +32,18 @@ export async function updateSession(request: NextRequest) {
 
     console.log("[Middleware] Processing request:", pathname)
 
+    // SEC-FIX: Apply rate limiting to admin and API routes
+    if (pathname.startsWith("/admin") || pathname.startsWith("/api")) {
+      // More aggressive rate limiting for login endpoint (5 attempts per minute)
+      const limit = pathname === "/admin/login" ? 5 : 60
+      const windowMs = 60000 // 1 minute
+
+      const rateLimitResult = rateLimitMiddleware(request, limit, windowMs)
+      if (rateLimitResult) {
+        return rateLimitResult
+      }
+    }
+
     // Determine if we need to authenticate the user
     // We only need auth if it's a protected route (or an auth route to redirect away)
     const isProtected = pathname.startsWith("/admin") || pathname.startsWith("/api")
@@ -44,7 +57,8 @@ export async function updateSession(request: NextRequest) {
       user = data.user
 
       if (user) {
-        console.log("[Middleware] User authenticated:", user.email)
+        // SEC-FIX: Removed PII logging - do not log user emails
+        console.log("[Middleware] User authenticated")
       }
     }
 
@@ -79,14 +93,16 @@ export async function updateSession(request: NextRequest) {
       }
 
       if (!isAdmin) {
-        console.warn("[Middleware] Non-admin user attempted to access admin route:", user.email)
+        // SEC-FIX: Removed PII logging - do not log user emails
+        console.warn("[Middleware] Non-admin user attempted to access admin route")
         if (pathname.startsWith("/api/")) {
           return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
         return redirectTo(request, "/admin/login")
       }
 
-      console.log("[Middleware] Admin access verified at edge for:", user.email)
+      // SEC-FIX: Removed PII logging - do not log user emails
+      console.log("[Middleware] Admin access verified at edge")
     }
 
   } catch (error) {

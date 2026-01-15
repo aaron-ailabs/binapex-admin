@@ -45,9 +45,10 @@ export function useLiveData<T extends { id?: string }>(
 
   const initialSignature = useMemo(() => JSON.stringify(initialRows.map((r: any) => r?.id ?? "")), [initialRows])
 
+  // SEC-FIX: Added sortOptions to dependency array to prevent stale sorting
   useEffect(() => {
     setRows(sortBy(initialRows, sortOptions))
-  }, [initialSignature])
+  }, [initialSignature, sortOptions])
 
   useEffect(() => {
     const supabase = createClient()
@@ -93,7 +94,8 @@ export function useLiveData<T extends { id?: string }>(
         supabase.removeChannel(channel)
       }
     }
-  }, [table])
+    // SEC-FIX: Added sortOptions to dependency to update subscriptions when sort changes
+  }, [table, sortOptions])
 
   return rows
 }

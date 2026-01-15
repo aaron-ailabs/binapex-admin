@@ -122,26 +122,32 @@ export async function rejectDeposit(transactionId: string, reason: string) {
 }
 
 export async function approveWithdrawal(transactionId: string) {
-  const supabase = await createClient()
+  // SEC-FIX: Added try-catch for proper error handling
+  try {
+    const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  if (!user) {
-    return { success: false, error: "Unauthorized" }
+    if (!user) {
+      return { success: false, error: "Unauthorized" }
+    }
+
+    const { error } = await supabase.rpc("approve_withdrawal", {
+      p_withdrawal_id: transactionId,
+      p_admin_id: user.id
+    })
+
+    if (error) {
+      return handleSupabaseError(error, "approve-withdrawal")
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] approveWithdrawal error:", error)
+    return { success: false, error: "Unexpected error during withdrawal approval" }
   }
-
-  const { error } = await supabase.rpc("approve_withdrawal", {
-    p_withdrawal_id: transactionId,
-    p_admin_id: user.id
-  })
-
-  if (error) {
-    return handleSupabaseError(error, "approve-withdrawal")
-  }
-
-  return { success: true }
 }
 
 export async function rejectWithdrawal(transactionId: string, reason: string) {

@@ -16,10 +16,12 @@ interface DepositApprovalListProps {
   deposits: any[]
 }
 
+// SEC-FIX: Use environment variable instead of hardcoded URL
 const getReceiptUrl = (url: string | null) => {
   if (!url) return null
   if (url.startsWith("http")) return url
-  return `https://kzpbaacqhpszizgsyflc.supabase.co/storage/v1/object/public/receipts/${url}`
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://kzpbaacqhpszizgsyflc.supabase.co"
+  return `${supabaseUrl}/storage/v1/object/public/receipts/${url}`
 }
 
 export function DepositApprovalList({ deposits: initialDeposits }: DepositApprovalListProps) {

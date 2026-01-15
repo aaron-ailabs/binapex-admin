@@ -389,5 +389,5 @@ export function SupportChatInterface() {
         </div>
     )
 }
-import { MessageSquare } from "lucide-react"
+// SEC-FIX: Removed duplicate import - MessageSquare already imported at top
 

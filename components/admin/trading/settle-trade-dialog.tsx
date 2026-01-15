@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useState } from "react"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 
 interface SettleTradeDialogProps {
     open: boolean
@@ -30,6 +31,7 @@ interface SettleTradeDialogProps {
 }
 
 export function SettleTradeDialog({ open, onOpenChange, trade }: SettleTradeDialogProps) {
+    const router = useRouter()
     const [outcome, setOutcome] = useState("win")
     const [payoutMultiplier, setPayoutMultiplier] = useState("1.85")
     const [reason, setReason] = useState("")
@@ -66,8 +68,8 @@ export function SettleTradeDialog({ open, onOpenChange, trade }: SettleTradeDial
 
             toast.success(`Trade ${trade.id.slice(0, 8)} settled as ${outcome.toUpperCase()}`)
             onOpenChange(false)
-            // Ideally refresh data
-            window.location.reload()
+            // SEC-FIX: Use router.refresh() instead of window.location.reload()
+            router.refresh()
         } catch (error: any) {
             toast.error(error.message || "Failed to settle trade")
         } finally {

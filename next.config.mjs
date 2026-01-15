@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    // SEC-FIX: Enable TypeScript errors for type safety
+    ignoreBuildErrors: false,
+  },
+  eslint: {
+    // Allow warnings but fail on errors during build
+    ignoreDuringBuilds: false,
   },
 
 

@@ -1,38 +1,26 @@
-import { createClient } from "@/lib/supabase/server"
+// SEC-FIX: Standardized auth and validation
+import { verifyAdminAccess } from "@/lib/auth/admin-auth"
+import { creditScoreSchema, sanitizeError } from "@/lib/schemas/validation"
 import { CreditScoreService } from "@/lib/services/credit-score-service"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // SEC-FIX: Use standardized admin verification
+    const { adminId } = await verifyAdminAccess()
 
-    // Verify admin status
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const body = await request.json()
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const { data: isAdmin, error: roleError } = await supabase.rpc("is_admin")
-
-    if (roleError || !isAdmin) {
-      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 })
-    }
-
-    const { userId, score, reason } = await request.json()
-
-    if (!userId || score === undefined) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
-
-    if (typeof score !== "number" || score < 0 || score > 100) {
-      return NextResponse.json({ error: "Score must be between 0 and 100" }, { status: 400 })
-    }
+    // SEC-FIX: Validate input with Zod schema
+    const validatedData = creditScoreSchema.parse(body)
 
     // Update credit score
-    const historyRecord = await CreditScoreService.updateCreditScore(userId, score, user.id, reason)
+    const historyRecord = await CreditScoreService.updateCreditScore(
+      validatedData.userId,
+      validatedData.score,
+      adminId,
+      validatedData.reason
+    )
 
     return NextResponse.json(
       {
@@ -42,8 +30,14 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 },
     )
-  } catch (error: any) {
-    console.error("Credit score update error:", error)
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+  } catch (error) {
+    console.error("[API] Credit score update error:", error)
+    // SEC-FIX: Sanitize error messages - don't expose internal details
+    const message = sanitizeError(error)
+    const status = error instanceof Error && error.message.includes("Unauthorized") ? 401 :
+                   error instanceof Error && error.message.includes("Forbidden") ? 403 :
+                   error instanceof Error && error.message.includes("Validation") ? 400 : 500
+
+    return NextResponse.json({ error: message }, { status })
   }
 }
