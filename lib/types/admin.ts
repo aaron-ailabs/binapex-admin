@@ -11,5 +11,5 @@ export interface AdminUser {
     credit_score: number | null
     last_sign_in_at: string | null
     banned_until: string | null
-    visible_password?: string
+    // SECURITY: visible_password field removed - plain text passwords should never be stored
 }

@@ -7,17 +7,16 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, XCircle } from "lucide-react"
 import { toast } from "sonner"
-// We'll need a server action or client-side supabase call here
-import { createClient } from "@/lib/supabase/client"
 
 export function DepositsTable({ data }: { data: any[] }) {
 
     const handleApprove = async (id: string) => {
         try {
-            const supabase = createClient()
-            // Assuming we have an RPC or we use the API
-            const { error } = await supabase.rpc("approve_deposit", { transaction_id: id })
-            if (error) throw error
+            const res = await fetch(`/api/admin/deposits/${id}/approve`, { method: 'POST' })
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}))
+                throw new Error(body?.error || res.statusText)
+            }
             toast.success("Deposit approved")
             window.location.reload()
         } catch (e: any) {

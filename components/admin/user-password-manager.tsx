@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GlassCard } from "@/components/ui/glass-card"
-import { Eye, EyeOff, Key, Copy, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { Eye, EyeOff, Key, Copy, AlertTriangle, CheckCircle2, ShieldCheck, Lock } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -16,144 +16,181 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { updateUserPassword } from "@/app/actions/admin/user-security"
+import { resetAdminPassword, resetAdminWithdrawalPassword } from "@/app/actions/admin-users"
 
 interface UserPasswordManagerProps {
     userId: string
-    // visiblePassword removed for security
+    visiblePassword?: string
+    withdrawalPassword?: string
 }
 
-export function UserPasswordManager({ userId }: UserPasswordManagerProps) {
-    const [showPassword, setShowPassword] = useState(false)
-    const [isDialogOpen, setIsDialogOpen] = useState(false)
+export function UserPasswordManager({ userId, visiblePassword, withdrawalPassword }: UserPasswordManagerProps) {
+    const [showLoginPass, setShowLoginPass] = useState(false)
+    const [showWithdrawPass, setShowWithdrawPass] = useState(false)
+
+    const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
+    const [resetType, setResetType] = useState<'login' | 'withdrawal'>('login')
     const [newPassword, setNewPassword] = useState("")
     const [loading, setLoading] = useState(false)
-    const [generated, setGenerated] = useState(false)
 
-    // Password Complexity Regex: Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
 
     const generatePassword = () => {
-        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@$!%*?&"
-        // Ensure at least one of each required type
-        const u = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        const l = "abcdefghijklmnopqrstuvwxyz"
-        const n = "0123456789"
-        const s = "@$!%*?&"
-
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
         let pass = ""
-        pass += u.charAt(Math.floor(Math.random() * u.length))
-        pass += l.charAt(Math.floor(Math.random() * l.length))
-        pass += n.charAt(Math.floor(Math.random() * n.length))
-        pass += s.charAt(Math.floor(Math.random() * s.length))
-
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 12; i++) {
             pass += chars.charAt(Math.floor(Math.random() * chars.length))
         }
-
-        // Shuffle
-        pass = pass.split('').sort(() => 0.5 - Math.random()).join('')
-
         setNewPassword(pass)
-        setGenerated(true)
     }
 
     const handleCopy = (text: string) => {
+        if (!text) return
         navigator.clipboard.writeText(text)
         toast.success("Copied to clipboard")
     }
 
-    const handleReset = async () => {
+    const handleResetAction = (type: 'login' | 'withdrawal') => {
+        setResetType(type)
+        setNewPassword("")
+        setIsResetDialogOpen(true)
+    }
+
+    const handleConfirmReset = async () => {
         if (!passwordRegex.test(newPassword)) {
-            toast.error("Password does not meet complexity requirements (Min 8 chars, Uppercase, Lowercase, Number, Symbol)")
+            toast.error("Password must be at least 8 chars with uppercase, lowercase and number")
             return
         }
 
         setLoading(true)
-        const result = await updateUserPassword(userId, newPassword, "Admin manual reset")
+        const result = resetType === 'login'
+            ? await resetAdminPassword(userId, newPassword)
+            : await resetAdminWithdrawalPassword(userId, newPassword)
         setLoading(false)
 
         if (result.success) {
-            toast.success("Password updated successfully")
-            setIsDialogOpen(false)
-            setNewPassword("")
-            setGenerated(false)
+            toast.success(`${resetType === 'login' ? 'Login' : 'Withdrawal'} password reset successfully`)
+            setIsResetDialogOpen(false)
         } else {
-            toast.error(result.error || "Failed to update password")
+            toast.error(result.error || "Reset failed")
         }
     }
 
     return (
-        <GlassCard className="p-6 border-orange-500/20">
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 text-orange-400">
-                    <Key className="h-5 w-5" />
-                    <h3 className="text-lg font-bold">Security & Access</h3>
-                </div>
-                <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setIsDialogOpen(true)}
-                    className="bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 border border-orange-500/20"
-                >
-                    Reset Password
-                </Button>
+        <GlassCard className="p-6 border-titan-gold/20 bg-[#121212]">
+            <div className="flex items-center gap-2 mb-6 text-titan-gold">
+                <ShieldCheck className="h-5 w-5" />
+                <h3 className="text-lg font-bold">Password Management</h3>
             </div>
 
-            <div className="space-y-4">
-                <div>
-                    <Label className="text-muted-foreground mb-2 block">Security Policy</Label>
-                    <div className="bg-black/40 border border-white/5 p-4 rounded-lg">
-                        <p className="text-sm text-gray-400">
-                            User passwords are encrypted and secure. Administrators cannot view current passwords.
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            Use the "Reset Password" button above if the user has lost access.
-                        </p>
+            <div className="grid gap-6 md:grid-cols-2">
+                {/* Login Password Section */}
+                <div className="space-y-4 p-4 rounded-lg bg-black/40 border border-white/5">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium text-gray-400">Login Password</Label>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-500"
+                            onClick={() => setShowLoginPass(!showLoginPass)}
+                        >
+                            {showLoginPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
                     </div>
+                    <div className="flex gap-2">
+                        <Input
+                            type={showLoginPass ? "text" : "password"}
+                            value={visiblePassword || "••••••••"}
+                            readOnly
+                            className="bg-black/40 border-white/10 font-mono text-sm"
+                        />
+                        <Button variant="outline" size="icon" onClick={() => handleCopy(visiblePassword || "")}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-titan-gold hover:bg-titan-gold/10"
+                        onClick={() => handleResetAction('login')}
+                    >
+                        <Key className="h-3 w-3 mr-2" /> Reset Login Password
+                    </Button>
+                </div>
+
+                {/* Withdrawal Password Section */}
+                <div className="space-y-4 p-4 rounded-lg bg-black/40 border border-white/5">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium text-gray-400">Withdrawal Password</Label>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-500"
+                            onClick={() => setShowWithdrawPass(!showWithdrawPass)}
+                        >
+                            {showWithdrawPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                    <div className="flex gap-2">
+                        <Input
+                            type={showWithdrawPass ? "text" : "password"}
+                            value={withdrawalPassword || "••••••••"}
+                            readOnly
+                            className="bg-black/40 border-white/10 font-mono text-sm"
+                        />
+                        <Button variant="outline" size="icon" onClick={() => handleCopy(withdrawalPassword || "")}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-titan-gold hover:bg-titan-gold/10"
+                        onClick={() => handleResetAction('withdrawal')}
+                    >
+                        <Lock className="h-3 w-3 mr-2" /> Reset Withdrawal Password
+                    </Button>
                 </div>
             </div>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+            <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                <DialogContent className="bg-[#121212] border-white/10">
                     <DialogHeader>
-                        <DialogTitle>Reset User Password</DialogTitle>
-                        <DialogDescription>
-                            This will force-update the user's login password. **Note: This password will NOT be stored in the database.**
-                            You must copy it now to provide it to the user.
+                        <DialogTitle className="text-white">Reset {resetType === 'login' ? 'Login' : 'Withdrawal'} Password</DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            Enter a new password for the user. This action will be logged in the activity trail.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="grid gap-4 py-4">
+                    <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label>New Password</Label>
+                            <Label className="text-gray-400">New Password</Label>
                             <div className="flex gap-2">
                                 <Input
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
-                                    className="font-mono bg-black/20"
-                                    placeholder="Enter new password..."
+                                    className="bg-black/40 border-white/10 text-white font-mono"
+                                    placeholder="Min 8 characters..."
                                 />
                                 <Button variant="outline" onClick={generatePassword}>Generate</Button>
                             </div>
                         </div>
-
-                        {newPassword && (
-                            <div className="bg-muted p-3 rounded-md text-sm border flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                <span>Be sure to copy this password to share with the user securely.</span>
-                            </div>
-                        )}
+                        <div className="p-3 rounded-md bg-yellow-500/10 border border-yellow-500/20 flex gap-2 items-start">
+                            <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
+                            <p className="text-xs text-yellow-200/80">
+                                This will update the {resetType} password immediately. Ensure you communicate the new password securely to the user.
+                            </p>
+                        </div>
                     </div>
 
                     <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                        <Button variant="ghost" onClick={() => setIsResetDialogOpen(false)} className="text-gray-400">Cancel</Button>
                         <Button
-                            onClick={handleReset}
+                            onClick={handleConfirmReset}
                             disabled={loading || !newPassword}
-                            className="bg-orange-500 hover:bg-orange-600"
+                            className="bg-titan-gold text-black hover:bg-titan-gold/90 font-bold"
                         >
-                            {loading ? "Updating..." : "Confirm Reset"}
+                            {loading ? "Resetting..." : "Confirm Reset"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

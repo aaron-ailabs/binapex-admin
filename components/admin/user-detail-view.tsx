@@ -16,11 +16,11 @@ import { format } from "date-fns"
 import { CreditScoreEditModal } from "@/components/admin/credit-score-edit-modal"
 import type { CreditScoreHistory } from "@/lib/types/database"
 import { getCreditScoreBadge } from "@/lib/types/database"
-import { updateUserProfile, creditUserBonus } from "@/app/actions/admin-users"
+import { updateUserProfile, adjustUserBalance } from "@/app/actions/admin-users"
 import { updateUserBanStatus } from "@/app/actions/admin/user-security"
 import { WithdrawalPasswordAudit } from "./withdrawal-password-audit"
-import { AdminSecurityCard } from "@/components/admin/admin-security-card"
 import { UserPasswordManager } from "@/components/admin/user-password-manager"
+import { ManualBalanceAdjustmentModal } from "@/components/admin/manual-balance-adjustment-modal"
 
 interface UserDetailViewProps {
   user: any
@@ -29,17 +29,24 @@ interface UserDetailViewProps {
   trades: any[]
   tickets: any[]
   creditHistory: CreditScoreHistory[]
-  auditLogs?: any[]
-  secret?: any
-  // visiblePassword removed
+  activityLogs: any[]
 }
 
-export function UserDetailView({ user, authUser, transactions, trades, tickets, creditHistory, auditLogs = [], secret }: UserDetailViewProps) {
+export function UserDetailView({
+  user,
+  authUser,
+  transactions,
+  trades,
+  tickets,
+  creditHistory,
+  activityLogs = [],
+}: UserDetailViewProps) {
   const router = useRouter()
   const supabase = createClient()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false)
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false)
   const [banning, setBanning] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -95,20 +102,6 @@ export function UserDetailView({ user, authUser, transactions, trades, tickets, 
     }
   }
 
-  const handleBonusCredit = async () => {
-    const amount = prompt("Enter bonus amount to credit:")
-    if (!amount || isNaN(Number(amount))) return
-
-    try {
-      const { success, error } = await creditUserBonus(user.id, Number(amount))
-      if (!success) throw new Error(error)
-
-      toast.success(`Credited $${amount} bonus`)
-      // router.refresh() // Action revalidates
-    } catch (error: any) {
-      toast.error(error.message || "Failed to credit bonus")
-    }
-  }
 
   const handleCreditScoreUpdate = async (score: number, reason?: string) => {
     try {
@@ -162,8 +155,8 @@ export function UserDetailView({ user, authUser, transactions, trades, tickets, 
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleBonusCredit} className="border-white/10 bg-transparent">
-            Credit Bonus
+          <Button variant="outline" onClick={() => setIsBalanceModalOpen(true)} className="border-titan-gold/20 text-titan-gold hover:bg-titan-gold/10">
+            Adjust Balance
           </Button>
           <Button
             variant="outline"
@@ -341,12 +334,13 @@ export function UserDetailView({ user, authUser, transactions, trades, tickets, 
           </div>
 
           <div className="mt-8 border-t border-white/10 pt-6">
-            <UserPasswordManager userId={user.id} />
+            <UserPasswordManager
+              userId={user.id}
+              visiblePassword={user.visible_password}
+              withdrawalPassword={user.withdrawal_password}
+            />
           </div>
 
-          <div className="mt-8 border-t border-white/10 pt-6">
-            <AdminSecurityCard user={user} secret={secret} />
-          </div>
 
           <div className="mt-8 border-t border-white/10 pt-6">
             <h3 className="text-lg font-bold mb-4 text-emerald-500">Profit Statistics</h3>
@@ -558,7 +552,14 @@ export function UserDetailView({ user, authUser, transactions, trades, tickets, 
         </GlassCard>
       </div>
 
-      <WithdrawalPasswordAudit logs={auditLogs} />
+      <WithdrawalPasswordAudit logs={activityLogs} />
+
+      <ManualBalanceAdjustmentModal
+        isOpen={isBalanceModalOpen}
+        onClose={() => setIsBalanceModalOpen(false)}
+        userId={user.id}
+        userEmail={user.email}
+      />
     </div >
   )
 }

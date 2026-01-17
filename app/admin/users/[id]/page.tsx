@@ -1,7 +1,6 @@
 import { AdminRoute } from "@/components/admin/admin-route"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createAdminClient } from "@supabase/supabase-js" // Import generic client for Admin ops
 import { UserDetailView } from "@/components/admin/user-detail-view"
 import { redirect } from "next/navigation"
 import { CreditScoreService } from "@/lib/services/credit-score-service"
@@ -12,10 +11,10 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
   const params = await props.params;
   const supabase = await createClient()
 
-  // 1. Fetch Profile (using RLS context)
+  // 1. Fetch Profile
   const { data: user } = await supabase
     .from("profiles")
-    .select("*, wallets(balance, asset)")
+    .select("*")
     .eq("id", params.id)
     .single()
 
@@ -23,15 +22,12 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
     redirect("/admin/users")
   }
 
-  // 2. Fetch Auth User Data (using Admin Client)
-  // We need this for Last Login, Banned Status, and Email verification status
-  const supabaseAdmin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-
-  const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.admin.getUserById(params.id)
+  // FIXME: The service role key was removed from this request path for security.
+  // The original implementation used supabase.auth.admin.getUserById() to fetch
+  // admin-only user auth data (e.g., last_sign_in_at, banned_until).
+  // To restore this, create a SECURITY DEFINER RPC function that can be safely
+  // called by an authenticated admin to retrieve these details for a specific user.
+  const authUser = null;
 
   const allData = await Promise.all([
     supabase
@@ -48,37 +44,25 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
       .limit(10),
     supabase.from("tickets").select("*").eq("user_id", params.id).order("created_at", { ascending: false }).limit(10),
     supabase
-      .from("withdrawal_password_audit")
-      .select("*")
-      .eq("user_id", params.id)
-      .order("timestamp", { ascending: false })
-      .limit(20),
-    supabase
-      .from("user_withdrawal_secrets")
-      .select("*")
-      .eq("user_id", params.id)
-      .single(),
-    supabase
-      .from("admin_audit_logs")
+      .from("activity_log")
       .select("*")
       .eq("target_user_id", params.id)
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(50),
+    supabase
+      .from("wallets")
+      .select("*")
+      .eq("user_id", params.id),
   ])
 
-  // Destructure properly
   const transactions = allData[0].data || []
   const trades = allData[1].data || []
   const tickets = allData[2].data || []
-  const auditLogs = allData[3].data || []
-  const secret = allData[4].data || null
-  const adminAuditLogs = allData[5].data || []
-  // const profileCredentials = allData[6].data || null // REMOVED
+  const activityLogs = allData[3].data || []
+  const wallets = allData[4].data || []
 
-  // Combine logs for cleaner view, or pass separate
-  // We'll pass adminAuditLogs separately or merge them if the view supports it.
-  // For now, let's keep existing structure but add admin logs if helpful. 
-  // UserDetailView expects `auditLogs` for withdrawal password. We'll stick to that for now.
+  // Add wallets to user object for the view
+  const userWithWallets = { ...user, wallets }
 
   let creditHistory: any[] = []
   try {
@@ -91,15 +75,13 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
     <AdminRoute>
       <AdminLayout>
         <UserDetailView
-          user={user}
-          authUser={authUser} // Pass Auth User Data
+          user={userWithWallets}
+          authUser={authUser} // authUser is now null
           transactions={transactions}
           trades={trades}
           tickets={tickets}
           creditHistory={creditHistory}
-          auditLogs={auditLogs}
-          secret={secret}
-        // visiblePassword removed
+          activityLogs={activityLogs}
         />
       </AdminLayout>
     </AdminRoute>

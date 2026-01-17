@@ -19,7 +19,9 @@ interface DepositApprovalListProps {
 const getReceiptUrl = (url: string | null) => {
   if (!url) return null
   if (url.startsWith("http")) return url
-  return `https://kzpbaacqhpszizgsyflc.supabase.co/storage/v1/object/public/receipts/${url}`
+  // Use environment variable for Supabase URL
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  return `${supabaseUrl}/storage/v1/object/public/receipts/${url}`
 }
 
 export function DepositApprovalList({ deposits: initialDeposits }: DepositApprovalListProps) {

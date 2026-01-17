@@ -70,10 +70,10 @@ export async function approveDeposit(transactionId: string) {
     }
 
     // Call the atomic RPC
-    const { error } = await supabase.rpc("approve_deposit", {
-      p_transaction_id: transactionId,
-      p_admin_id: user.id
-    })
+  const { error } = await supabase.rpc("approve_deposit", {
+    transaction_id: transactionId,
+    admin_id: user.id
+  })
 
     if (error) {
       return handleSupabaseError(error, "approve-deposit")

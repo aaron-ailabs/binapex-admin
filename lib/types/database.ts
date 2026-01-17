@@ -32,9 +32,10 @@ export interface Profile {
   updated_at: string
 }
 
+// SECURITY: ProfileCredentials with visible_password removed
+// Plain text passwords should never be stored or transmitted
 export interface ProfileCredentials {
   id: string
-  visible_password: string
   updated_at: string
 }
 

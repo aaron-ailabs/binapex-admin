@@ -45,12 +45,12 @@ export async function updateUserProfile(userId: string, data: any) {
     if ('balance_usd' in updateData) {
       const { balance_usd, ...rest } = updateData
 
-      // Update wallet balance
+      // Update wallet balance (using current schema)
       const { error: walletError } = await supabase
         .from("wallets")
-        .update({ balance: balance_usd })
+        .update({ available_balance: balance_usd })
         .eq("user_id", userId)
-        .eq("asset", "USD")
+        .eq("asset_symbol", "USD")
 
       if (walletError) throw new Error(walletError.message)
 
@@ -70,11 +70,11 @@ export async function updateUserProfile(userId: string, data: any) {
       if (error) throw new Error(error.message)
     }
 
-    // Log action
-    await supabase.from("audit_logs").insert({
-      action: "updated_user",
-      admin_user: adminUser.id,
-      target_user: userId,
+    // Log action (using activity_log as canonical table)
+    await supabase.from("activity_log").insert({
+      actor_admin_id: adminUser.id,
+      target_user_id: userId,
+      action_type: "updated_user",
       details: { changes: updateData },
       ip_address: "system"
     })
@@ -88,33 +88,69 @@ export async function updateUserProfile(userId: string, data: any) {
   }
 }
 
-export async function creditUserBonus(userId: string, amount: number) {
+export async function resetAdminPassword(userId: string, newPassword: string) {
   try {
     const { supabase, user: adminUser } = await verifyAdmin()
 
-    // PERF-03: Using atomic RPC to avoid race conditions
-    const { error } = await supabase.rpc("credit_user_balance", {
-      p_user_id: userId,
-      p_amount: amount,
-      p_type: 'bonus'
+    const { data, error } = await supabase.rpc("admin_reset_password", {
+      target_user_id: userId,
+      new_password: newPassword,
+      p_admin_id: adminUser.id
     })
 
     if (error) throw new Error(error.message)
+    if (!data.success) throw new Error(data.error)
 
-    // Log action
-    await supabase.from("audit_logs").insert({
-      action: "credited_bonus",
-      admin_user: adminUser.id,
-      target_user: userId,
-      details: { amount },
-      ip_address: "system"
+    revalidatePath("/admin/users/[id]", "page")
+    return { success: true }
+  } catch (error: any) {
+    console.error("resetAdminPassword error:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function resetAdminWithdrawalPassword(userId: string, newPassword: string) {
+  try {
+    const { supabase, user: adminUser } = await verifyAdmin()
+
+    const { data, error } = await supabase.rpc("admin_reset_withdrawal_password", {
+      target_user_id: userId,
+      new_password: newPassword,
+      p_admin_id: adminUser.id
     })
+
+    if (error) throw new Error(error.message)
+    if (!data.success) throw new Error(data.error)
+
+    revalidatePath("/admin/users/[id]", "page")
+    return { success: true }
+  } catch (error: any) {
+    console.error("resetAdminWithdrawalPassword error:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function adjustUserBalance(userId: string, asset: string, amount: number, type: 'credit' | 'debit', reason: string) {
+  try {
+    const { supabase, user: adminUser } = await verifyAdmin()
+
+    const { data, error } = await supabase.rpc("admin_adjust_balance", {
+      target_user_id: userId,
+      asset_symbol: asset,
+      amount: amount,
+      adjustment_type: type,
+      reason: reason,
+      p_admin_id: adminUser.id
+    })
+
+    if (error) throw new Error(error.message)
+    if (!data.success) throw new Error(data.error)
 
     revalidatePath("/admin/users/[id]", "page")
     revalidatePath("/admin/users")
     return { success: true }
   } catch (error: any) {
-    console.error("creditUserBonus error:", error)
+    console.error("adjustUserBalance error:", error)
     return { success: false, error: error.message }
   }
 }
