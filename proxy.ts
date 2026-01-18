@@ -1,7 +1,17 @@
-import { type NextRequest } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 import { updateSession } from "@/lib/supabase/proxy"
 
 export default async function proxy(request: NextRequest) {
+  const hostname = request.nextUrl.hostname
+
+  // Domain Enforcement
+  if (process.env.NODE_ENV === "production") {
+    if (hostname !== "admin.binapex.my") {
+      console.warn(`[Admin Proxy] Unauthorized domain: ${hostname}. Rejecting access.`)
+      return new NextResponse('Domain Not Found', { status: 404 })
+    }
+  }
+
   return await updateSession(request)
 }
 

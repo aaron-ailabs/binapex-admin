@@ -1,19 +1,12 @@
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { UsersTable } from "@/components/admin/users/users-table"
-import { createClient } from "@/lib/supabase/server"
+import { adminListUsers } from "@/lib/admin-rpc"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminUsersPage() {
-  const supabase = await createClient()
-
-  // Fetch initial users list (server-side)
-  // We fetch a bit more than usual to populate the table initially
-  const { data: users, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(50)
+  // Fetch initial users list (server-side) using secure RPC wrapper
+  const { data: users, error } = await adminListUsers(1, 50, null)
 
   return (
     <AdminLayout>

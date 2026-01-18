@@ -22,9 +22,9 @@ type UserProfile = {
     email: string
     full_name: string | null
     role: string
-    membership_tier: string
+    status: string // 'active', 'frozen', 'suspended'
     created_at: string
-    kyc_verified: boolean
+    total_count?: number
 }
 
 export function UsersTable({ initialData }: { initialData: any[] }) {
@@ -64,17 +64,16 @@ export function UsersTable({ initialData }: { initialData: any[] }) {
             accessorKey: "status",
             header: "Status",
             cell: ({ row }) => {
-                const isVerified = row.original.kyc_verified
-                const tier = row.original.membership_tier || 'standard'
+                const status = row.original.status || 'active'
                 return (
                     <div className="flex flex-col gap-1">
                         <Badge variant="outline" className={
-                            isVerified ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                                "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                            status === 'active' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                                status === 'frozen' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                                    "bg-amber-500/10 text-amber-500 border-amber-500/20"
                         }>
-                            {isVerified ? "VERIFIED" : "PENDING"}
+                            {status.toUpperCase()}
                         </Badge>
-                        <span className="text-[10px] text-muted-foreground uppercase">{tier}</span>
                     </div>
                 )
             }

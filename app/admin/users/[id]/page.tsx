@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { UserDetailView } from "@/components/admin/user-detail-view"
 import { redirect } from "next/navigation"
 import { CreditScoreService } from "@/lib/services/credit-score-service"
+import { adminGetUserDetail } from "@/lib/admin-rpc"
 
 export const dynamic = "force-dynamic"
 
@@ -11,7 +12,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
   const params = await props.params;
   const supabase = await createClient()
 
-  // 1. Fetch Profile
+  // 1. Fetch Profile (Rich Data - allowed by RLS for Admins)
   const { data: user } = await supabase
     .from("profiles")
     .select("*")
@@ -22,12 +23,16 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
     redirect("/admin/users")
   }
 
-  // FIXME: The service role key was removed from this request path for security.
-  // The original implementation used supabase.auth.admin.getUserById() to fetch
-  // admin-only user auth data (e.g., last_sign_in_at, banned_until).
-  // To restore this, create a SECURITY DEFINER RPC function that can be safely
-  // called by an authenticated admin to retrieve these details for a specific user.
-  const authUser = null;
+  // 2. Call Admin RPC to trigger Audit Log and verify admin access
+  // This also returns the status and a proxy for last_login
+  const { data: rpcUser, error: rpcError } = await adminGetUserDetail(params.id)
+
+  // Construct authUser object for the view using RPC data
+  // The RPC uses updated_at as a proxy for last_login/last_sign_in_at
+  const authUser = rpcUser ? {
+    last_sign_in_at: rpcUser.last_login,
+    // Add other auth fields if RPC provides them in future
+  } : null;
 
   const allData = await Promise.all([
     supabase
