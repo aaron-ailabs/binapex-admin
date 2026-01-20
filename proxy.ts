@@ -12,6 +12,8 @@ export default async function proxy(request: NextRequest) {
     }
   }
 
+  // updateSession handles both session management and admin authentication
+  // See lib/supabase/proxy.ts lines 54-90 for admin route protection
   return await updateSession(request)
 }
 
