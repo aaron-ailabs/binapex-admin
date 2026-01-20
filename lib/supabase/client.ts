@@ -43,5 +43,10 @@ export function createClient() {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
     },
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
   })
 }

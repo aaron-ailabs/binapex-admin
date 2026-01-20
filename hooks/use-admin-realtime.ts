@@ -1,9 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import type { RealtimeChannel } from "@supabase/supabase-js"
+import { useAuth } from "@/contexts/auth-context"
+import { logError, logInfo } from "@/lib/utils"
 
 interface LiveStats {
   pendingDeposits: number
@@ -13,6 +15,8 @@ interface LiveStats {
 }
 
 export function useAdminRealtime() {
+  const { user, isAuthenticated } = useAuth()
+  const supabase = useMemo(() => createClient(), [])
   const [stats, setStats] = useState<LiveStats>({
     pendingDeposits: 0,
     openTickets: 0,
@@ -22,12 +26,12 @@ export function useAdminRealtime() {
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
-    let channel: RealtimeChannel
+    if (!isAuthenticated || !user) return
 
-    const setupRealtime = async () => {
-      // Fetch initial stats
-      const fetchStats = async () => {
+    let channel: RealtimeChannel | null = null
+
+    const fetchStats = async () => {
+      try {
         const [depositsResult, ticketsResult, usersResult, tradesResult] = await Promise.all([
           supabase
             .from("transactions")
@@ -45,117 +49,117 @@ export function useAdminRealtime() {
           activeUsers: usersResult.count || 0,
           openTrades: tradesResult.count || 0,
         })
+      } catch (e) {
+        logError("API admin_realtime.fetchStats", e)
       }
-
-      await fetchStats()
-
-      // Subscribe to real-time updates
-      channel = supabase
-        .channel("admin-updates")
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "transactions",
-            filter: "type=eq.deposit",
-          },
-          (payload) => {
-            setStats((prev) => ({ ...prev, pendingDeposits: prev.pendingDeposits + 1 }))
-            toast.info("New deposit request received", {
-              description: `Transaction ID: ${payload.new.id}`,
-            })
-          },
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "transactions",
-            filter: "type=eq.deposit",
-          },
-          (payload: any) => {
-            if (payload.old.status === "pending" && payload.new.status !== "pending") {
-              setStats((prev) => ({
-                ...prev,
-                pendingDeposits: Math.max(0, prev.pendingDeposits - 1),
-              }))
-            }
-          },
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "tickets",
-          },
-          (payload: any) => {
-            setStats((prev) => ({ ...prev, openTickets: prev.openTickets + 1 }))
-            toast.info("New support ticket", {
-              description: payload.new.subject || "New ticket submitted",
-            })
-          },
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "tickets",
-          },
-          (payload: any) => {
-            if (payload.old.status === "open" && payload.new.status !== "open") {
-              setStats((prev) => ({
-                ...prev,
-                openTickets: Math.max(0, prev.openTickets - 1),
-              }))
-            }
-          },
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "trades",
-          },
-          (payload: any) => {
-             if (payload.new.status === 'open') {
-                setStats((prev) => ({ ...prev, openTrades: prev.openTrades + 1 }))
-             }
-          },
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "trades",
-          },
-           (payload: any) => {
-            if (payload.old.status === "open" && payload.new.status !== "open") {
-               setStats((prev) => ({ ...prev, openTrades: Math.max(0, prev.openTrades - 1) }))
-            } 
-            else if (payload.old.status !== "open" && payload.new.status === "open") {
-               setStats((prev) => ({ ...prev, openTrades: prev.openTrades + 1 }))
-            }
-          },
-        )
-        .subscribe((status) => {
-          setIsConnected(status === "SUBSCRIBED")
-        })
     }
 
-    setupRealtime()
+    fetchStats()
+
+    channel = supabase
+      .channel("admin-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "transactions",
+          filter: "type=eq.deposit",
+        },
+        (payload) => {
+          setStats((prev) => ({ ...prev, pendingDeposits: prev.pendingDeposits + 1 }))
+          toast.info("New deposit request received", {
+            description: `Transaction ID: ${payload.new.id}`,
+          })
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "transactions",
+          filter: "type=eq.deposit",
+        },
+        (payload: any) => {
+          if (payload.old.status === "pending" && payload.new.status !== "pending") {
+            setStats((prev) => ({
+              ...prev,
+              pendingDeposits: Math.max(0, prev.pendingDeposits - 1),
+            }))
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "tickets",
+        },
+        (payload: any) => {
+          setStats((prev) => ({ ...prev, openTickets: prev.openTickets + 1 }))
+          toast.info("New support ticket", {
+            description: payload.new.subject || "New ticket submitted",
+          })
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "tickets",
+        },
+        (payload: any) => {
+          if (payload.old.status === "open" && payload.new.status !== "open") {
+            setStats((prev) => ({
+              ...prev,
+              openTickets: Math.max(0, prev.openTickets - 1),
+            }))
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "trades",
+        },
+        (payload: any) => {
+          if (payload.new.status === "open") {
+            setStats((prev) => ({ ...prev, openTrades: prev.openTrades + 1 }))
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "trades",
+        },
+        (payload: any) => {
+          if (payload.old.status === "open" && payload.new.status !== "open") {
+            setStats((prev) => ({ ...prev, openTrades: Math.max(0, prev.openTrades - 1) }))
+          } else if (payload.old.status !== "open" && payload.new.status === "open") {
+            setStats((prev) => ({ ...prev, openTrades: prev.openTrades + 1 }))
+          }
+        },
+      )
+      .subscribe((state) => {
+        setIsConnected(state === "SUBSCRIBED")
+        logInfo("Realtime", `admin-updates ${state}`)
+      })
 
     return () => {
       if (channel) {
+        channel.unsubscribe()
         supabase.removeChannel(channel)
       }
     }
-  }, [])
+  }, [isAuthenticated, supabase, user])
 
   return { stats, isConnected }
 }
