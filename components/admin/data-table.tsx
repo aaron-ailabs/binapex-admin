@@ -30,13 +30,21 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, Search, SlidersHorizontal } from "lucide-react"
+import { ChevronDown, Search, SlidersHorizontal, AlertCircle, RefreshCcw } from "lucide-react"
+import { AdminLoader } from "@/components/ui/admin-loader"
+import { TableEmptyState } from "./table-empty-state"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface AdminDataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
     data: TData[]
     searchKey?: string
     searchPlaceholder?: string
+    isLoading?: boolean
+    error?: Error | null
+    onRetry?: () => void
+    emptyTitle?: string
+    emptyDescription?: string
 }
 
 export function AdminDataTable<TData, TValue>({
@@ -44,6 +52,11 @@ export function AdminDataTable<TData, TValue>({
     data,
     searchKey,
     searchPlaceholder = "Search...",
+    isLoading = false,
+    error = null,
+    onRetry,
+    emptyTitle = "No results found",
+    emptyDescription = "No data matches your current filters or search criteria.",
 }: AdminDataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -114,56 +127,88 @@ export function AdminDataTable<TData, TValue>({
                     </DropdownMenu>
                 </div>
             </div>
-            <div className="rounded-md border border-white/10 bg-card/30 overflow-hidden">
-                <Table>
-                    <TableHeader className="bg-white/5">
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id} className="border-white/5 hover:bg-transparent">
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id} className="text-muted-foreground font-medium h-10">
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                    header.column.columnDef.header,
-                                                    header.getContext()
-                                                )}
-                                        </TableHead>
-                                    )
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
-                                    className="border-white/5 hover:bg-white/5 transition-colors data-[state=selected]:bg-primary/10"
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className="py-3">
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
+            <div className="rounded-md border border-white/10 bg-card/30 overflow-hidden relative">
+                <div className="overflow-x-auto max-h-[600px]">
+                    <Table>
+                        <TableHeader className="bg-muted/80 backdrop-blur-md sticky top-0 z-10">
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id} className="border-white/5 hover:bg-transparent">
+                                    {headerGroup.headers.map((header) => {
+                                        return (
+                                            <TableHead key={header.id} className="text-muted-foreground font-medium h-10 whitespace-nowrap">
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                        header.column.columnDef.header,
+                                                        header.getContext()
+                                                    )}
+                                            </TableHead>
+                                        )
+                                    })}
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center text-muted-foreground"
-                                >
-                                    No results found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                            ))}
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} className="p-0">
+                                        <AdminLoader type="table" count={10} height="h-10" />
+                                    </TableCell>
+                                </TableRow>
+                            ) : error ? (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} className="h-64">
+                                        <div className="flex flex-col items-center justify-center p-8">
+                                            <Alert variant="destructive" className="max-w-md mb-4 bg-red-900/20 border-red-900/50">
+                                                <AlertCircle className="h-4 w-4 text-red-400" />
+                                                <AlertTitle className="text-red-400">Error</AlertTitle>
+                                                <AlertDescription className="text-red-300">
+                                                    {error.message || "Failed to load data"}
+                                                </AlertDescription>
+                                            </Alert>
+                                            {onRetry && (
+                                                <Button onClick={onRetry} variant="outline" className="gap-2 border-white/20 hover:bg-white/5">
+                                                    <RefreshCcw className="h-4 w-4" />
+                                                    Retry
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : table.getRowModel().rows?.length ? (
+                                table.getRowModel().rows.map((row) => (
+                                    <TableRow
+                                        key={row.id}
+                                        data-state={row.getIsSelected() && "selected"}
+                                        className="border-white/5 hover:bg-white/5 transition-colors data-[state=selected]:bg-primary/10 group"
+                                    >
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id} className="py-2 px-4 whitespace-nowrap">
+                                                {flexRender(
+                                                    cell.column.columnDef.cell,
+                                                    cell.getContext()
+                                                )}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell
+                                        colSpan={columns.length}
+                                        className="h-24 p-0"
+                                    >
+                                        <TableEmptyState 
+                                            title={emptyTitle}
+                                            description={emptyDescription}
+                                            onClearFilters={table.getColumn(searchKey || "")?.getFilterValue() ? () => table.getColumn(searchKey || "")?.setFilterValue("") : undefined}
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
             <div className="flex items-center justify-end space-x-2 py-2">
                 <div className="flex-1 text-sm text-muted-foreground">

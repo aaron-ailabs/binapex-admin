@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +10,9 @@ import { ChatMessageList } from "./chat-message-list"
 import { ChatInputBar } from "./chat-input-bar"
 import { useSupportChat } from "@/hooks/use-support-chat"
 import { formatDistanceToNow } from "date-fns"
+import { useAuth } from "@/contexts/auth-context"
+import { AdminLoader } from "@/components/ui/admin-loader"
+import { logError } from "@/lib/utils"
 
 interface Conversation {
   conversation_id: string
@@ -32,10 +35,13 @@ export function AdminChatPanel() {
   const [conversationsError, setConversationsError] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [showMobileList, setShowMobileList] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const { user } = useAuth()
 
   // Load conversations
   const loadConversations = useCallback(async () => {
+    if (!user) return
+
     setIsLoadingConversations(true)
     setConversationsError(null)
 
@@ -49,25 +55,19 @@ export function AdminChatPanel() {
 
       setConversations(data || [])
     } catch (err) {
-      console.error("Failed to load conversations:", err)
+      logError("API admin_support_conversations_view.select", err)
       setConversationsError(
         err instanceof Error ? err.message : "Failed to load conversations"
       )
     } finally {
       setIsLoadingConversations(false)
     }
-  }, [supabase])
+  }, [supabase, user])
 
   // Get current user ID
   useEffect(() => {
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setCurrentUserId(user?.id || null)
-    }
-    getCurrentUser()
-  }, [supabase])
+    setCurrentUserId(user?.id || null)
+  }, [user])
 
   // Load conversations on mount
   useEffect(() => {
@@ -76,6 +76,8 @@ export function AdminChatPanel() {
 
   // Subscribe to conversation updates
   useEffect(() => {
+    if (!user) return
+
     const channel = supabase
       .channel("admin_conversations")
       .on(
@@ -105,9 +107,10 @@ export function AdminChatPanel() {
       .subscribe()
 
     return () => {
+      channel.unsubscribe()
       supabase.removeChannel(channel)
     }
-  }, [loadConversations, supabase])
+  }, [loadConversations, supabase, user])
 
   const selectedConversation = conversations.find(
     (c) => c.conversation_id === selectedConversationId
@@ -133,7 +136,7 @@ export function AdminChatPanel() {
     try {
       await sendMessage(message)
     } catch (error) {
-      console.error("Failed to send:", error)
+      logError("API send_support_message", error)
     }
   }
 
@@ -154,7 +157,7 @@ export function AdminChatPanel() {
         setShowMobileList(true)
       }
     } catch (err) {
-      console.error("Failed to close conversation:", err)
+      logError("API close_support_conversation", err)
     }
   }
 
@@ -178,92 +181,94 @@ export function AdminChatPanel() {
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto relative">
           {isLoadingConversations ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-gold" />
-                <p className="text-sm text-muted-foreground">Loading...</p>
-              </div>
+            <div className="p-4">
+              <AdminLoader type="table" count={8} height="h-14" />
             </div>
           ) : conversationsError ? (
             <div className="p-4">
               <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-                <p className="text-sm font-medium text-destructive">Error</p>
+                <p className="text-sm font-medium text-destructive font-mono uppercase tracking-wider text-[10px]">Error</p>
                 <p className="mt-1 text-xs text-muted-foreground">{conversationsError}</p>
               </div>
             </div>
           ) : conversations.length === 0 ? (
-            <div className="flex h-full items-center justify-center p-4 text-center">
-              <div>
-                <MessageCircle className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                <p className="mt-3 text-sm font-medium">No conversations yet</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  New conversations will appear here
-                </p>
-              </div>
+            <div className="flex h-full items-center justify-center p-0">
+              <TableEmptyState 
+                title="No conversations yet"
+                description="New support requests will appear here once users initiate a chat."
+                icon={MessageCircle}
+              />
             </div>
           ) : (
-            <div className="divide-y">
-              {conversations.map((conversation) => (
-                <button
-                  key={conversation.conversation_id}
-                  onClick={() => handleSelectConversation(conversation.conversation_id)}
-                  className={cn(
-                    "w-full p-4 text-left transition-colors",
-                    "hover:bg-muted/50",
-                    selectedConversationId === conversation.conversation_id &&
-                      "bg-muted/80 border-l-4 border-l-gold"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate font-medium">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-muted/80 backdrop-blur-md sticky top-0 z-10 border-b border-border">
+                <tr>
+                  <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-mono text-muted-foreground">User</th>
+                  <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-mono text-muted-foreground text-center">Status</th>
+                  <th className="px-4 py-2 text-[10px] uppercase tracking-wider font-mono text-muted-foreground text-right">Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {conversations.map((conversation) => (
+                  <tr
+                    key={conversation.conversation_id}
+                    onClick={() => handleSelectConversation(conversation.conversation_id)}
+                    className={cn(
+                      "cursor-pointer transition-colors relative group",
+                      "hover:bg-muted/50",
+                      selectedConversationId === conversation.conversation_id &&
+                        "bg-muted/80 border-l-4 border-l-gold"
+                    )}
+                  >
+                    <td className="px-4 py-3 min-w-0">
+                      <div className="flex flex-col">
+                        <p className="truncate font-bold text-xs text-foreground">
                           {conversation.user_name || conversation.user_email || "Unknown User"}
                         </p>
-                        <Badge
-                          variant={conversation.status === "OPEN" ? "default" : "secondary"}
-                          className={cn(
-                            "shrink-0 text-xs",
-                            conversation.status === "OPEN"
-                              ? "bg-green-500/20 text-green-700 dark:text-green-400"
-                              : "bg-gray-500/20 text-gray-700 dark:text-gray-400"
-                          )}
-                        >
-                          {conversation.status}
-                        </Badge>
+                        <p className="truncate text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">
+                          {conversation.user_email || "No Email"}
+                        </p>
+                        {conversation.latest_message && (
+                          <p className="mt-1 truncate text-xs text-muted-foreground leading-tight line-clamp-1 max-w-[150px]">
+                            {conversation.latest_message_sender === "ADMIN" && <span className="text-gold font-bold">You: </span>}
+                            {conversation.latest_message}
+                          </p>
+                        )}
                       </div>
-                      {conversation.user_email && (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {conversation.user_email}
-                        </p>
-                      )}
-                      {conversation.latest_message && (
-                        <p className="mt-1 truncate text-sm text-muted-foreground">
-                          {conversation.latest_message_sender === "ADMIN" && "You: "}
-                          {conversation.latest_message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
-                      {conversation.latest_message_at && (
-                        <span>
-                          {formatDistanceToNow(new Date(conversation.latest_message_at), {
-                            addSuffix: true,
-                          })}
+                    </td>
+                    <td className="px-4 py-3 text-center align-top">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[9px] py-0 px-1 font-mono uppercase",
+                          conversation.status === "OPEN"
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                            : "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                        )}
+                      >
+                        {conversation.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right align-top">
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[9px] text-muted-foreground font-mono uppercase whitespace-nowrap">
+                          {conversation.latest_message_at ? formatDistanceToNow(new Date(conversation.latest_message_at), {
+                            addSuffix: false,
+                          }).replace('about ', '') : "-"}
                         </span>
-                      )}
-                      {conversation.message_count > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {conversation.message_count}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+                        {conversation.message_count > 0 && (
+                          <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 min-w-[16px] flex items-center justify-center bg-primary/20 text-primary border-none">
+                            {conversation.message_count}
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>

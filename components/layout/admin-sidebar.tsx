@@ -149,10 +149,10 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                         if (!item.items) {
                             return (
                                 <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="hover:bg-primary/10 hover:text-primary">
-                                        <Link href={item.url}>
-                                            <item.icon />
-                                            <span>{item.title}</span>
+                                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="hover:bg-primary/10 hover:text-primary transition-all duration-200">
+                                        <Link href={item.url} className={cn("flex items-center gap-3 w-full", isActive && "text-primary font-bold")}>
+                                            <item.icon className={cn("h-4 w-4", isActive && "text-primary")} />
+                                            <span className="text-sm">{item.title}</span>
                                         </Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
@@ -172,15 +172,18 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
                                         <SidebarMenuSub>
-                                            {item.items?.map((subItem) => (
-                                                <SidebarMenuSubItem key={subItem.title}>
-                                                    <SidebarMenuSubButton asChild isActive={pathname === subItem.url} className="hover:text-primary">
-                                                        <Link href={subItem.url}>
-                                                            <span>{subItem.title}</span>
-                                                        </Link>
-                                                    </SidebarMenuSubButton>
-                                                </SidebarMenuSubItem>
-                                            ))}
+                                            {item.items?.map((subItem) => {
+                                                const isSubActive = pathname === subItem.url
+                                                return (
+                                                    <SidebarMenuSubItem key={subItem.title}>
+                                                        <SidebarMenuSubButton asChild isActive={isSubActive} className={cn("hover:text-primary transition-colors", isSubActive && "text-primary font-bold")}>
+                                                            <Link href={subItem.url}>
+                                                                <span className="text-xs">{subItem.title}</span>
+                                                            </Link>
+                                                        </SidebarMenuSubButton>
+                                                    </SidebarMenuSubItem>
+                                                )
+                                            })}
                                         </SidebarMenuSub>
                                     </CollapsibleContent>
                                 </SidebarMenuItem>
