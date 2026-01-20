@@ -30,8 +30,7 @@ export async function updateUserPassword(
         const { supabase, adminId } = await getAdminClient()
 
         // 1. Update password via secure RPC
-        // FIXME: This requires a SECURITY DEFINER RPC: `admin_reset_user_password(target_user_id uuid, new_password text)`
-        // The RPC must verify the CALLER has the 'admin' role before proceeding.
+        // Uses SECURITY DEFINER RPC that verifies caller has 'admin' role
         const { error: rpcError } = await supabase.rpc('admin_reset_user_password', {
             target_user_id: targetUserId,
             new_password: newPassword
@@ -64,8 +63,7 @@ export async function updateUserBanStatus(
         const { supabase, adminId } = await getAdminClient()
 
         // 1. Update ban status via secure RPC
-        // FIXME: This requires a SECURITY DEFINER RPC: `admin_ban_user(target_user_id uuid, duration_hours int)`
-        // The RPC must verify the CALLER has the 'admin' role before proceeding.
+        // Uses SECURITY DEFINER RPC that verifies caller has 'admin' role
         const { error: rpcError } = await supabase.rpc('admin_ban_user', {
             target_user_id: targetUserId,
             duration_hours: banDurationHours
