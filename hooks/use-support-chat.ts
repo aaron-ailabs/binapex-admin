@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { ChatMessage } from "@/components/support-chat/chat-bubble"
+import { useAuth } from "@/contexts/auth-context"
+import { logError, logInfo } from "@/lib/utils"
 
 interface UseSupportChatOptions {
   conversationId: string | null
@@ -24,12 +26,13 @@ export function useSupportChat({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const { user } = useAuth()
 
   // Load messages
   const loadMessages = useCallback(async () => {
-    if (!conversationId || !enabled) return
+    if (!conversationId || !enabled || !user) return
 
     setIsLoading(true)
     setError(null)
@@ -45,12 +48,12 @@ export function useSupportChat({
 
       setMessages(data || [])
     } catch (err) {
-      console.error("Failed to load messages:", err)
+      logError("API support_messages.select", err)
       setError(err instanceof Error ? err.message : "Failed to load messages")
     } finally {
       setIsLoading(false)
     }
-  }, [conversationId, enabled, supabase])
+  }, [conversationId, enabled, supabase, user])
 
   // Send message using RPC
   const sendMessage = useCallback(
@@ -65,7 +68,7 @@ export function useSupportChat({
       })
 
       if (sendError) {
-        console.error("Failed to send message:", sendError)
+        logError("API send_support_message", sendError)
         throw new Error(sendError.message || "Failed to send message")
       }
 
@@ -78,7 +81,13 @@ export function useSupportChat({
 
   // Subscribe to Realtime updates
   useEffect(() => {
-    if (!conversationId || !enabled) return
+    if (!conversationId || !enabled || !user) return
+
+    if (channelRef.current) {
+      channelRef.current.unsubscribe()
+      supabase.removeChannel(channelRef.current)
+      channelRef.current = null
+    }
 
     // Initial load
     loadMessages()
@@ -107,10 +116,10 @@ export function useSupportChat({
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          console.log("Subscribed to chat updates")
+          logInfo("Realtime", "Subscribed to chat updates", { conversationId })
         }
         if (status === "CHANNEL_ERROR") {
-          console.error("Failed to subscribe to chat updates")
+          logError("Realtime", "Failed to subscribe to chat updates")
           setError("Real-time updates unavailable")
         }
       })
@@ -120,11 +129,12 @@ export function useSupportChat({
     // Cleanup
     return () => {
       if (channelRef.current) {
+        channelRef.current.unsubscribe()
         supabase.removeChannel(channelRef.current)
         channelRef.current = null
       }
     }
-  }, [conversationId, enabled, loadMessages, supabase])
+  }, [conversationId, enabled, loadMessages, supabase, user])
 
   return {
     messages,
@@ -140,7 +150,7 @@ export function useGetOrCreateConversation() {
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const hasAttemptedRef = useRef(false)
 
   const getOrCreateConversation = useCallback(async () => {
@@ -159,7 +169,7 @@ export function useGetOrCreateConversation() {
 
       setConversationId(data)
     } catch (err) {
-      console.error("Failed to get or create conversation:", err)
+      logError("API get_or_create_support_conversation", err)
       setError(err instanceof Error ? err.message : "Failed to initialize chat")
       hasAttemptedRef.current = false // Allow retry
     } finally {

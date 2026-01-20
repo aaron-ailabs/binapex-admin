@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { RealtimeChannel } from "@supabase/supabase-js"
+import { useAuth } from "@/contexts/auth-context"
 
 type SortOptions = {
   column?: string
@@ -42,6 +43,7 @@ export function useLiveData<T extends { id?: string }>(
   sortOptions?: SortOptions,
 ) {
   const [rows, setRows] = useState<T[]>(() => sortBy(initialRows, sortOptions))
+  const { user } = useAuth()
 
   const initialSignature = useMemo(() => JSON.stringify(initialRows.map((r: any) => r?.id ?? "")), [initialRows])
 
@@ -50,6 +52,8 @@ export function useLiveData<T extends { id?: string }>(
   }, [initialSignature])
 
   useEffect(() => {
+    if (!user) return
+
     const supabase = createClient()
     let channel: RealtimeChannel | null = null
 
@@ -90,10 +94,11 @@ export function useLiveData<T extends { id?: string }>(
 
     return () => {
       if (channel) {
+        channel.unsubscribe()
         supabase.removeChannel(channel)
       }
     }
-  }, [table])
+  }, [table, user])
 
   return rows
 }
