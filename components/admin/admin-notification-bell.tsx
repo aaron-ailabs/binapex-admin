@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Bell, Check, Trash2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import {
@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { cn, logError } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
+import { useAuth } from "@/contexts/auth-context"
 
 interface Notification {
   id: string
@@ -27,16 +28,21 @@ interface Notification {
 export function AdminNotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const { user } = useAuth()
 
   const fetchNotifications = async () => {
+    if (!user) return
+
     const { data, error } = await supabase
       .from("admin_notifications")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(5)
 
-    if (!error && data) {
+    if (error) {
+      logError("API admin_notifications.select", error)
+    } else if (data) {
       setNotifications(data)
     }
 
@@ -45,13 +51,17 @@ export function AdminNotificationBell() {
       .select("*", { count: "exact", head: true })
       .eq("is_read", false)
 
-    if (!countError) {
+    if (countError) {
+      logError("API admin_notifications.count", countError)
+    } else {
       setUnreadCount(count || 0)
     }
   }
 
   useEffect(() => {
     fetchNotifications()
+
+    if (!user) return
 
     // Subscribe to new notifications
     const channel = supabase
@@ -81,9 +91,10 @@ export function AdminNotificationBell() {
       .subscribe()
 
     return () => {
+      channel.unsubscribe()
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [supabase, user])
 
   const markAsRead = async (id: string) => {
     await supabase

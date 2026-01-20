@@ -30,25 +30,7 @@ export default async function AdminAssetsPage() {
           {error ? (
             <div className="text-red-500">Error loading assets. Please try again.</div>
           ) : (
-            <GlassCard className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-white/5 text-gray-400 uppercase font-mono text-xs hidden md:table-header-group">
-                    <tr>
-                      <th className="p-4">Asset</th>
-                      <th className="p-4 hidden md:table-cell">Name</th>
-                      <th className="p-4">Payout Rate</th>
-                      <th className="p-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {assets?.map((asset: any) => (
-                      <AdminAssetRow key={asset.id} asset={asset} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </GlassCard>
+            <AssetsTable assets={assets || []} />
           )}
         </div>
       </AdminLayout>

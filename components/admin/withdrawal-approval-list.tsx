@@ -1,15 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, XCircle, Eye, Loader2 } from "lucide-react"
+import { AlertCircle, CheckCircle, Eye, Loader2, RefreshCcw, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/contexts/auth-context"
+import { useDeterministicFetch } from "@/hooks/use-deterministic-fetch"
+import { AdminLoader } from "@/components/ui/admin-loader"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface Withdrawal {
   id: string
@@ -35,8 +39,37 @@ interface Withdrawal {
 }
 
 export function WithdrawalApprovalList() {
-  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([])
-  const [loading, setLoading] = useState(true)
+  const supabase = useMemo(() => createClient(), [])
+  const { user } = useAuth()
+
+  // Define fetch function
+  const fetchWithdrawalsFn = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("withdrawals")
+      .select(
+        `
+        *,
+        profiles:user_id (full_name, email)
+      `,
+      )
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data as Withdrawal[]
+  }, [supabase])
+
+  const { 
+    data: withdrawals = [], 
+    status, 
+    error, 
+    retry: fetchWithdrawals, 
+    isLoading: loading 
+  } = useDeterministicFetch({
+    fn: fetchWithdrawalsFn,
+    timeoutMs: 10000,
+    onError: (err) => toast.error("Failed to load withdrawals", { description: err.message })
+  })
+
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null)
   const [processing, setProcessing] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "COMPLETED" | "REJECTED">("PENDING")
@@ -46,10 +79,11 @@ export function WithdrawalApprovalList() {
   const [rejectSubmitting, setRejectSubmitting] = useState(false)
   const [approveTarget, setApproveTarget] = useState<Withdrawal | null>(null)
   const [approveSubmitting, setApproveSubmitting] = useState(false)
-  const supabase = createClient()
 
   useEffect(() => {
     fetchWithdrawals()
+
+    if (!user) return
 
     const channel = supabase
       .channel("withdrawal-approvals")
@@ -68,29 +102,10 @@ export function WithdrawalApprovalList() {
       .subscribe()
 
     return () => {
+      channel.unsubscribe()
       supabase.removeChannel(channel)
     }
-  }, [])
-
-  const fetchWithdrawals = async () => {
-    const { data, error } = await supabase
-      .from("withdrawals")
-      .select(
-        `
-        *,
-        profiles:user_id (full_name, email)
-      `,
-      )
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("Error fetching withdrawals:", error)
-      toast.error("Failed to load withdrawals")
-    } else {
-      setWithdrawals(data || [])
-    }
-    setLoading(false)
-  }
+  }, [user, fetchWithdrawals, supabase])
 
   const handleApprove = async (withdrawalId: string) => {
     setProcessing(withdrawalId)
@@ -162,10 +177,22 @@ export function WithdrawalApprovalList() {
     }
   }
 
-  if (loading) {
+  if (loading && withdrawals.length === 0) {
+    return <AdminLoader type="table" count={8} text="Loading withdrawals..." />
+  }
+
+  if (status === "error") {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center p-8 min-h-[400px]">
+        <Alert variant="destructive" className="max-w-md mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error?.message || "Failed to load withdrawals"}</AlertDescription>
+        </Alert>
+        <Button onClick={fetchWithdrawals} variant="outline" className="gap-2">
+          <RefreshCcw className="h-4 w-4" />
+          Retry
+        </Button>
       </div>
     )
   }
@@ -260,24 +287,27 @@ export function WithdrawalApprovalList() {
               ))}
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
+          <div className="overflow-x-auto relative max-h-[600px] border border-border rounded-lg">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/80 backdrop-blur-md sticky top-0 z-10">
                 <tr className="border-b border-border">
-                  <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">User</th>
-                  <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Amount</th>
-                  <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Details</th>
-                  <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Status</th>
-                  <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Admin Note</th>
-                  <th className="text-left p-4 text-muted-foreground font-medium whitespace-nowrap">Date</th>
-                  <th className="text-right p-4 text-muted-foreground font-medium whitespace-nowrap">Actions</th>
+                  <th className="text-left px-4 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">User</th>
+                  <th className="text-right px-4 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Amount</th>
+                  <th className="text-left px-4 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Method</th>
+                  <th className="text-center px-4 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Status</th>
+                  <th className="text-left px-4 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Note</th>
+                  <th className="text-right px-4 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Date</th>
+                  <th className="text-right px-4 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {filteredWithdrawals.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center p-8 text-muted-foreground">
-                      No withdrawals match the current filters
+                    <td colSpan={7} className="text-center p-0">
+                      <TableEmptyState 
+                        title="No withdrawals match the current filters"
+                        description="Try adjusting your search query or status filter to see more requests."
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -288,71 +318,73 @@ export function WithdrawalApprovalList() {
                     const sub = method === "BANK" ? details.account_number : details.wallet_id
 
                     return (
-                      <tr key={withdrawal.id} className="border-b border-border hover:bg-muted/50">
-                        <td className="p-4 whitespace-nowrap">
-                          <div>
-                            <div className="font-medium text-foreground">
+                      <tr key={withdrawal.id} className="hover:bg-muted/50 transition-colors group">
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-foreground text-xs">
                               {withdrawal.profiles?.full_name || "Unknown"}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono uppercase">
                               {withdrawal.profiles?.email || "No Email"}
-                            </div>
+                            </span>
                           </div>
                         </td>
-                        <td className="p-4 whitespace-nowrap">
-                          <div className="font-bold text-foreground">${withdrawal.amount_usd}</div>
-                          <div className="text-sm text-muted-foreground">≈ MYR {withdrawal.amount_myr}</div>
+                        <td className="px-4 py-2 whitespace-nowrap text-right">
+                          <div className="font-bold text-foreground font-mono text-xs">${withdrawal.amount_usd}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">≈ MYR {withdrawal.amount_myr}</div>
                         </td>
-                        <td className="p-4 whitespace-nowrap">
-                          <div className="text-sm text-foreground font-medium">{method}</div>
-                          <div className="text-sm text-muted-foreground">
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <div className="text-xs text-foreground font-medium">{method}</div>
+                          <div className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={`${title} (${sub})`}>
                             {title} ({sub})
                           </div>
                         </td>
-                        <td className="p-4 whitespace-nowrap">
+                        <td className="px-4 py-2 whitespace-nowrap text-center">
                           <Badge
-                            variant={
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] py-0",
                               withdrawal.status === "PENDING"
-                                ? "secondary"
+                                ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
                                 : withdrawal.status === "COMPLETED"
-                                  ? "default"
-                                  : "destructive"
-                            }
+                                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                  : "bg-red-500/10 text-red-500 border-red-500/20"
+                            )}
                           >
                             {withdrawal.status}
                           </Badge>
                         </td>
-                        <td className="p-4 max-w-xs align-top">
-                          <div className="text-xs text-muted-foreground truncate" title={withdrawal.admin_note || ""}>
+                        <td className="px-4 py-2 max-w-[150px]">
+                          <div className="text-[10px] text-muted-foreground truncate" title={withdrawal.admin_note || ""}>
                             {withdrawal.admin_note || "-"}
                           </div>
                         </td>
-                        <td className="p-4 whitespace-nowrap text-sm text-muted-foreground">
-                          {new Date(withdrawal.created_at).toLocaleDateString()}
+                        <td className="px-4 py-2 whitespace-nowrap text-right text-[10px] text-muted-foreground font-mono">
+                          {format(new Date(withdrawal.created_at), "MMM dd, yyyy")}
                         </td>
-                        <td className="p-4 whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => setSelectedWithdrawal(withdrawal)}
-                              className="hover:bg-primary/10"
+                              className="h-7 w-7 p-0 hover:bg-primary/10"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3.5 w-3.5" />
                             </Button>
                             {withdrawal.status === "PENDING" && (
                               <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setApproveTarget(withdrawal)}
-                              disabled={processing === withdrawal.id}
-                              className="text-green-500 hover:bg-green-500/10"
-                            >
-                              {processing === withdrawal.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setApproveTarget(withdrawal)}
+                                  disabled={processing === withdrawal.id}
+                                  className="h-7 w-7 p-0 text-emerald-500 hover:bg-emerald-500/10"
+                                >
+                                  {processing === withdrawal.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                   ) : (
-                                    <CheckCircle className="h-4 w-4" />
+                                    <CheckCircle className="h-3.5 w-3.5" />
                                   )}
                                 </Button>
                                 <Button
@@ -363,9 +395,9 @@ export function WithdrawalApprovalList() {
                                     setRejectReason("")
                                   }}
                                   disabled={processing === withdrawal.id}
-                                  className="text-red-500 hover:bg-red-500/10"
+                                  className="h-7 w-7 p-0 text-red-500 hover:bg-red-500/10"
                                 >
-                                  <XCircle className="h-4 w-4" />
+                                  <XCircle className="h-3.5 w-3.5" />
                                 </Button>
                               </>
                             )}

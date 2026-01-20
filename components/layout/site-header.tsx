@@ -4,6 +4,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Search } from "lucide-react"
 import { AdminNotificationBell } from "@/components/admin/admin-notification-bell"
+import { RealtimeStatus } from "@/components/admin/realtime-status"
 
 export function SiteHeader() {
     return (
@@ -24,6 +25,7 @@ export function SiteHeader() {
             </div>
 
             <div className="ml-auto flex items-center gap-4">
+                <RealtimeStatus />
                 <AdminNotificationBell />
             </div>
         </header>

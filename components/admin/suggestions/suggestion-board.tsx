@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import {
     Plus,
@@ -32,6 +32,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useAuth } from "@/contexts/auth-context"
+import { logError } from "@/lib/utils"
 
 interface Suggestion {
     id: string
@@ -59,7 +61,8 @@ export function SuggestionBoard() {
     const [selectedSuggestion, setSelectedSuggestion] = useState<Suggestion | null>(null)
     const [comments, setComments] = useState<Comment[]>([])
     const [newComment, setNewComment] = useState("")
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
+    const { user } = useAuth()
 
     // Form State
     const [newTitle, setNewTitle] = useState("")
@@ -69,50 +72,65 @@ export function SuggestionBoard() {
 
     const fetchSuggestions = async () => {
         setLoading(true)
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('admin_suggestions')
             .select('*')
             .order('created_at', { ascending: false })
 
-        if (data) setSuggestions(data as Suggestion[])
+        if (error) {
+            logError("API admin_suggestions.select", error)
+        } else if (data) {
+            setSuggestions(data as Suggestion[])
+        }
         setLoading(false)
     }
 
     const fetchComments = async (suggestionId: string) => {
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('suggestion_comments')
             .select('*')
             .eq('suggestion_id', suggestionId)
             .order('created_at', { ascending: true })
-        if (data) setComments(data as Comment[])
+        if (error) {
+            logError("API suggestion_comments.select", error)
+        } else if (data) {
+            setComments(data as Comment[])
+        }
     }
 
     useEffect(() => {
+        if (!user) return
+
         fetchSuggestions()
         const channel = supabase
             .channel('admin_suggestions_board')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_suggestions' }, fetchSuggestions)
             .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [])
+        return () => { 
+            channel.unsubscribe()
+            supabase.removeChannel(channel) 
+        }
+    }, [supabase, user])
 
     useEffect(() => {
-        if (selectedSuggestion) {
-            fetchComments(selectedSuggestion.id)
-            const channel = supabase
-                .channel(`comments_${selectedSuggestion.id}`)
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'suggestion_comments',
-                    filter: `suggestion_id=eq.${selectedSuggestion.id}`
-                }, (payload) => {
-                    setComments(prev => [...prev, payload.new as Comment])
-                })
-                .subscribe()
-            return () => { supabase.removeChannel(channel) }
+        if (!user || !selectedSuggestion) return
+        fetchComments(selectedSuggestion.id)
+        const channel = supabase
+            .channel(`comments_${selectedSuggestion.id}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'suggestion_comments',
+                filter: `suggestion_id=eq.${selectedSuggestion.id}`
+            }, (payload) => {
+                setComments(prev => [...prev, payload.new as Comment])
+            })
+            .subscribe()
+        return () => { 
+            channel.unsubscribe()
+            supabase.removeChannel(channel) 
         }
-    }, [selectedSuggestion])
+    }, [selectedSuggestion, supabase, user])
 
     const handleCreate = async () => {
         const { data: { user } } = await supabase.auth.getUser()

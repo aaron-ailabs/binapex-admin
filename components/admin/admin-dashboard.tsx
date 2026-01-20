@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 interface AdminDashboardProps {
   initialStats: {
@@ -18,6 +19,7 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ initialStats, recentDeposits }: AdminDashboardProps) {
+  const router = useRouter()
   const { stats, isConnected } = useAdminRealtime()
 
   // Use real-time stats if available, otherwise use initial stats
@@ -81,35 +83,63 @@ export function AdminDashboard({ initialStats, recentDeposits }: AdminDashboardP
       </div>
 
       {/* Recent Activity Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6">
         {/* Recent Deposits */}
-        <GlassCard className="p-6 col-span-2">
-          <div className="flex items-center justify-between mb-4">
+        <GlassCard className="p-0 overflow-hidden">
+          <div className="flex items-center justify-between p-6 border-b border-white/5">
             <h3 className="text-lg font-bold">Recent Deposits</h3>
             <Link href="/admin/finance">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="hover:bg-white/5 text-xs">
                 View All
               </Button>
             </Link>
           </div>
-          <div className="space-y-3">
-            {recentDeposits.length === 0 ? (
-              <p className="text-center text-gray-400 py-8">No pending deposits</p>
-            ) : (
-              recentDeposits.map((deposit) => (
-                <div key={deposit.id} className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-white font-mono">
-                      {deposit.currency} {Number(deposit.amount).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-gray-400">{format(new Date(deposit.created_at), "MMM dd, HH:mm")}</p>
-                  </div>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    Pending
-                  </Badge>
-                </div>
-              ))
-            )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-white/5 text-gray-500 font-mono text-[10px] uppercase tracking-wider">
+                <tr>
+                  <th className="px-6 py-3 font-medium">User</th>
+                  <th className="px-6 py-3 font-medium text-right">Amount</th>
+                  <th className="px-6 py-3 font-medium text-center">Status</th>
+                  <th className="px-6 py-3 font-medium text-right">Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {recentDeposits.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center text-gray-400 py-12">No pending deposits</td>
+                  </tr>
+                ) : (
+                  recentDeposits.map((deposit) => (
+                    <tr 
+                      key={deposit.id} 
+                      className="hover:bg-white/5 transition-colors cursor-pointer group"
+                      onClick={() => router.push("/admin/finance")}
+                    >
+                      <td className="px-6 py-3">
+                        <div className="flex flex-col">
+                          <span className="text-white font-medium">{deposit.profiles?.email || "Unknown User"}</span>
+                          <span className="text-[10px] text-gray-500 font-mono uppercase">{deposit.user_id.slice(0, 8)}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        <span className="text-white font-bold font-mono">
+                          {deposit.currency} {Number(deposit.amount).toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-center">
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px]">
+                          PENDING
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-3 text-right text-gray-500 text-xs">
+                        {format(new Date(deposit.created_at), "HH:mm")}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </GlassCard>
       </div>

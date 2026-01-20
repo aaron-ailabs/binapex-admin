@@ -54,53 +54,54 @@ export function AdminAssetRow({ asset }: AdminAssetRowProps) {
   }
 
   return (
-    <tr className="flex flex-col md:table-row border-b border-white/5 hover:bg-white/5 transition-colors p-4 md:p-0 gap-4">
+    <tr className="hover:bg-white/5 transition-colors group">
       {/* Asset Info */}
-      <td className="md:p-4 flex justify-between items-center md:table-cell">
-        <div>
-           <div className="font-medium text-white">{asset.symbol}</div>
-           <div className="text-xs text-gray-500 md:hidden">{asset.name}</div>
-        </div>
-        {/* Status Indicator for Mobile */}
-        <div className="md:hidden">
-             <span className={`text-[10px] px-2 py-0.5 rounded ${asset.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                {asset.is_active ? 'Active' : 'Inactive'}
-             </span>
+      <td className="px-6 py-2 whitespace-nowrap">
+        <div className="flex items-center gap-2">
+           <div className="font-bold text-white text-xs">{asset.symbol}</div>
+           <span className={cn(
+             "text-[9px] px-1 rounded-sm uppercase font-mono",
+             asset.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+           )}>
+              {asset.is_active ? 'Active' : 'Inactive'}
+           </span>
         </div>
       </td>
 
       {/* Name (Desktop Only) */}
-      <td className="p-4 text-gray-400 hidden md:table-cell">{asset.name}</td>
+      <td className="px-6 py-2 text-gray-500 text-xs hidden md:table-cell uppercase tracking-tight">{asset.name}</td>
 
       {/* Payout Rate input */}
-      <td className="md:p-4 md:table-cell block">
-        <label className="text-xs text-gray-500 mb-1 block md:hidden">Payout Rate (%)</label>
-        <div className="flex items-center gap-2 max-w-full md:max-w-[150px]">
-          <div className="relative w-full">
+      <td className="px-6 py-2">
+        <div className="flex items-center gap-2 max-w-[100px]">
+          <div className="relative w-full group/input">
             <Input
               type="number"
               min="0"
               max="100"
               value={payoutRate}
               onChange={handleChange}
-              className="bg-black/20 border-white/10 pr-8 w-full"
+              className="bg-black/20 border-white/5 h-7 text-xs font-mono pr-6 focus:border-primary/50"
             />
-            <span className="absolute right-3 top-2.5 text-xs text-gray-500">%</span>
+            <span className="absolute right-2 top-1.5 text-[10px] text-gray-600">%</span>
           </div>
         </div>
       </td>
 
       {/* Actions */}
-      <td className="md:p-4 md:text-right md:table-cell block">
-         <div className="flex justify-end w-full">
+      <td className="px-6 py-2 text-right">
+         <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
             <Button 
                 size="sm" 
                 onClick={handleSave} 
                 disabled={isSaving || !hasChanges}
-                className={`w-full md:w-auto ${hasChanges ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-white/5 text-gray-500'}`}
+                className={cn(
+                  "h-7 px-2 text-[10px] font-bold",
+                  hasChanges ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-white/5 text-gray-500'
+                )}
             >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2 md:mr-0" />}
-                <span className="md:hidden">{isSaving ? 'Saving...' : 'Save Changes'}</span>
+                {isSaving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />}
+                Save
             </Button>
          </div>
       </td>

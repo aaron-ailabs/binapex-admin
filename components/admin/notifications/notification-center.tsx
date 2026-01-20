@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import {
     Bell,
@@ -29,6 +29,11 @@ import { cn } from "@/lib/utils"
 // date-fns
 import { formatDistanceToNow, format } from "date-fns"
 import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
+import { logError } from "@/lib/utils"
+import { AdminLoader } from "@/components/ui/admin-loader"
+import { TableEmptyState } from "../table-empty-state"
+import { DollarSign, CreditCard, Check } from "lucide-react"
 
 interface Notification {
     id: string
@@ -44,7 +49,8 @@ export function NotificationCenter() {
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState("all")
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
+    const { user } = useAuth()
 
     // Stats
     const stats = {
@@ -55,6 +61,8 @@ export function NotificationCenter() {
     }
 
     const fetchNotifications = async () => {
+        if (!user) return
+
         setLoading(true)
         // Join with auth.users if possible, or just fetch notifications
         // Note: To join with auth.users in Supabase client, we need a view or RPC usually, 
@@ -66,7 +74,9 @@ export function NotificationCenter() {
             .order("created_at", { ascending: false })
             .limit(100) // Reasonable limit for checking history
 
-        if (!error && data) {
+        if (error) {
+            logError("API admin_notifications.select", error)
+        } else if (data) {
             setNotifications(data)
         }
         setLoading(false)
@@ -74,6 +84,8 @@ export function NotificationCenter() {
 
     useEffect(() => {
         fetchNotifications()
+
+        if (!user) return
 
         const channel = supabase
             .channel("admin_notification_center")
@@ -85,9 +97,10 @@ export function NotificationCenter() {
             .subscribe()
 
         return () => {
+            channel.unsubscribe()
             supabase.removeChannel(channel)
         }
-    }, [])
+    }, [supabase, user])
 
     const handleMarkAllRead = async () => {
         const { error } = await supabase
@@ -211,47 +224,115 @@ export function NotificationCenter() {
                             <TabsTrigger value="trade">Trades</TabsTrigger>
                         </TabsList>
 
-                        <div className="rounded-md border">
-                            <div className="flex flex-col">
-                                {filteredNotifications.length === 0 ? (
-                                    <div className="p-8 text-center text-muted-foreground">
-                                        No notifications found matching this filter.
-                                    </div>
-                                ) : (
-                                    filteredNotifications.map((notif) => (
-                                        <div
-                                            key={notif.id}
-                                            className={cn(
-                                                "flex items-center justify-between p-4 border-b last:border-0 hover:bg-muted/50 transition-colors",
-                                                !notif.is_read && "bg-muted/20"
-                                            )}
-                                        >
-                                            <div className="flex items-start gap-4">
-                                                <div className={cn(
-                                                    "mt-1 p-2 rounded-full bg-background border shadow-sm",
-                                                )}>
-                                                    {getIcon(notif.type)}
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className={cn("text-sm font-medium", !notif.is_read && "text-primary")}>
-                                                        {notif.message}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                        <Badge variant="secondary" className="text-[10px] uppercase font-normal h-5">
-                                                            {notif.type}
-                                                        </Badge>
-                                                        <span>•</span>
-                                                        <span>{format(new Date(notif.created_at), 'MMM d, h:mm a')}</span>
-                                                        <span>({formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })})</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {!notif.is_read && (
-                                                <div className="h-2 w-2 rounded-full bg-blue-500" />
-                                            )}
-                                        </div>
-                                    ))
-                                )}
+                        <div className="rounded-md border bg-card overflow-hidden">
+                            <div className="overflow-x-auto relative max-h-[700px]">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-muted/80 backdrop-blur-md sticky top-0 z-10">
+                                        <tr className="border-b border-border">
+                                            <th className="text-left px-6 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Activity</th>
+                                            <th className="text-left px-6 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Details</th>
+                                            <th className="text-right px-6 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Time</th>
+                                            <th className="text-right px-6 py-3 text-muted-foreground font-mono text-[10px] uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                         {loading ? (
+                                             <tr>
+                                                 <td colSpan={4} className="p-0">
+                                                     <AdminLoader type="table" count={10} height="h-14" />
+                                                 </td>
+                                             </tr>
+                                         ) : filteredNotifications.length === 0 ? (
+                                             <tr>
+                                                 <td colSpan={4} className="p-0">
+                                                     <TableEmptyState 
+                                                         title="No notifications found"
+                                                         description="Activity logs will appear here as users interact with the platform."
+                                                         icon={Bell}
+                                                     />
+                                                 </td>
+                                             </tr>
+                                         ) : (
+                                             filteredNotifications.map((notif) => (
+                                                 <tr 
+                                                     key={notif.id} 
+                                                     className={cn(
+                                                         "hover:bg-muted/50 transition-colors group",
+                                                         !notif.is_read && "bg-primary/5"
+                                                     )}
+                                                 >
+                                                     <td className="px-6 py-2">
+                                                         <div className="flex items-center gap-3">
+                                                             <div className={cn(
+                                                                 "p-2 rounded-lg shrink-0 bg-background border shadow-sm",
+                                                             )}>
+                                                                 {getIcon(notif.type)}
+                                                             </div>
+                                                             <div className="flex flex-col">
+                                                                 <span className="font-bold text-xs text-foreground uppercase tracking-tight">
+                                                                     {notif.type}
+                                                                 </span>
+                                                                 <span className="text-[10px] text-muted-foreground font-mono uppercase">
+                                                                     System Log
+                                                                 </span>
+                                                             </div>
+                                                         </div>
+                                                     </td>
+                                                     <td className="px-6 py-2">
+                                                         <p className="text-xs text-muted-foreground line-clamp-1 max-w-md">
+                                                             {notif.message}
+                                                         </p>
+                                                     </td>
+                                                     <td className="px-6 py-2 text-right whitespace-nowrap">
+                                                         <span className="text-[10px] text-muted-foreground font-mono uppercase">
+                                                             {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                                                         </span>
+                                                     </td>
+                                                     <td className="px-6 py-2 text-right">
+                                                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                             {!notif.is_read && (
+                                                                 <Button
+                                                                     variant="ghost"
+                                                                     size="sm"
+                                                                     onClick={async () => {
+                                                                         const { error } = await supabase
+                                                                             .from("admin_notifications")
+                                                                             .update({ is_read: true })
+                                                                             .eq("id", notif.id)
+                                                                         if (!error) fetchNotifications()
+                                                                     }}
+                                                                     className="h-7 w-7 p-0 text-primary hover:bg-primary/10"
+                                                                     title="Mark as read"
+                                                                 >
+                                                                     <Check className="h-3.5 w-3.5" />
+                                                                 </Button>
+                                                             )}
+                                                             <Button
+                                                                 variant="ghost"
+                                                                 size="sm"
+                                                                 onClick={async () => {
+                                                                     if (!confirm("Are you sure you want to delete this notification?")) return
+                                                                     const { error } = await supabase
+                                                                         .from("admin_notifications")
+                                                                         .delete()
+                                                                         .eq("id", notif.id)
+                                                                     if (!error) {
+                                                                         toast.success("Notification deleted")
+                                                                         setNotifications(prev => prev.filter(n => n.id !== notif.id))
+                                                                     }
+                                                                 }}
+                                                                 className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                                                                 title="Delete"
+                                                             >
+                                                                 <Trash2 className="h-3.5 w-3.5" />
+                                                             </Button>
+                                                         </div>
+                                                     </td>
+                                                 </tr>
+                                             ))
+                                         )}
+                                     </tbody>
+                                </table>
                             </div>
                         </div>
                     </Tabs>

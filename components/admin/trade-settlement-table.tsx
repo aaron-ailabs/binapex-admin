@@ -1,14 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { Loader2, TrendingUp, TrendingDown, CheckCircle, XCircle, History } from "lucide-react"
+import { Loader2, TrendingUp, TrendingDown, CheckCircle, XCircle, History, AlertCircle, RefreshCcw } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { useDeterministicFetch } from "@/hooks/use-deterministic-fetch"
+import { AdminLoader } from "@/components/ui/admin-loader"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { logError, logInfo } from "@/lib/utils"
 
 interface SettlementAudit {
     id: string
@@ -34,19 +38,9 @@ interface Trade {
 }
 
 export function TradeSettlementTable() {
-    const supabase = createClient()
-    const [trades, setTrades] = useState<Trade[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [processingId, setProcessingId] = useState<string | null>(null)
-    const [now, setNow] = useState(Date.now())
-    const [auditOpen, setAuditOpen] = useState(false)
-    const [auditLoading, setAuditLoading] = useState(false)
-    const [auditLogs, setAuditLogs] = useState<SettlementAudit[]>([])
-    const [auditOrderId, setAuditOrderId] = useState<string | null>(null)
-    const [searchQuery, setSearchQuery] = useState("")
-
-    const fetchTrades = async () => {
-        setIsLoading(true)
+    const supabase = useMemo(() => createClient(), [])
+    
+    const fetchTradesFn = useCallback(async () => {
         const { data: tradesData, error } = await supabase
             .from('orders')
             .select('*')
@@ -54,10 +48,7 @@ export function TradeSettlementTable() {
             .eq('type', 'binary')
             .order('created_at', { ascending: false })
 
-        if (error) {
-            toast.error("Failed to load trades")
-            return
-        }
+        if (error) throw error
 
         if (tradesData && tradesData.length > 0) {
             const userIds = Array.from(new Set(tradesData.map(t => t.user_id)))
@@ -67,14 +58,35 @@ export function TradeSettlementTable() {
                 ...trade,
                 user_email: users?.find(u => u.id === trade.user_id)?.email || 'Unknown User'
             }))
-            setTrades(enrichedTrades)
-        } else {
-            setTrades([])
+            return enrichedTrades as Trade[]
         }
-        setIsLoading(false)
-    }
+        return []
+    }, [supabase])
+
+    const { 
+        data: trades = [], 
+        status, 
+        error, 
+        retry: fetchTrades, 
+        isLoading,
+        setData: setTrades
+    } = useDeterministicFetch({
+        fn: fetchTradesFn,
+        timeoutMs: 10000,
+        onError: (err) => toast.error("Failed to load trades", { description: err.message })
+    })
+
+    const [processingId, setProcessingId] = useState<string | null>(null)
+    const [now, setNow] = useState(Date.now())
+    const [auditOpen, setAuditOpen] = useState(false)
+    const [auditLoading, setAuditLoading] = useState(false)
+    const [auditLogs, setAuditLogs] = useState<SettlementAudit[]>([])
+    const [auditOrderId, setAuditOrderId] = useState<string | null>(null)
+    const [searchQuery, setSearchQuery] = useState("")
+    const [confirmTarget, setConfirmTarget] = useState<{ tradeId: string, outcome: 'WIN' | 'LOSS' } | null>(null)
 
     const handleSettle = async (tradeId: string, outcome: 'WIN' | 'LOSS') => {
+        setConfirmTarget(null)
         setProcessingId(tradeId)
         try {
             const trade = trades.find(t => t.id === tradeId)
@@ -101,11 +113,8 @@ export function TradeSettlementTable() {
 
             // [FIX] Optimistically update local state to prevent "Ongoing" flicker
             setTrades(prev => prev.filter(t => t.id !== tradeId))
-
-            // Still fetch to ensure everything is in sync
-            await fetchTrades()
         } catch (error: any) {
-            console.error("Settlement error:", error)
+            logError("API settle_binary_order", error)
             toast.error(`Error: ${error.message}`)
         } finally {
             setProcessingId(null)
@@ -124,16 +133,17 @@ export function TradeSettlementTable() {
                 schema: 'public',
                 table: 'orders'
             }, (payload) => {
-                console.log('Order change detected:', payload)
+                logInfo("Realtime", "Order change detected", payload)
                 fetchTrades() // Refresh list on any change
             })
             .subscribe()
 
         return () => {
+            channel.unsubscribe()
             supabase.removeChannel(channel)
             clearInterval(interval)
         }
-    }, [])
+    }, [fetchTrades, supabase])
 
     const formatCountdown = (endTime: string | null | undefined) => {
         if (!endTime) return "--:--"
@@ -156,6 +166,7 @@ export function TradeSettlementTable() {
             .order("created_at", { ascending: false })
 
         if (error) {
+            logError("API trade_settlement_audit_logs.select", error)
             toast.error("Failed to load settlement history")
             setAuditLogs([])
         } else {
@@ -173,6 +184,36 @@ export function TradeSettlementTable() {
             trade.asset_symbol?.toLowerCase().includes(query)
         )
     })
+
+    if (isLoading && trades.length === 0) {
+        return (
+            <Card className="bg-white/5 border-white/10 p-4">
+                <AdminLoader type="table" count={6} text="Loading active trades..." />
+            </Card>
+        )
+    }
+
+    if (status === "error") {
+        return (
+            <Card className="bg-white/5 border-white/10 p-8 flex flex-col items-center justify-center">
+                <Alert variant="destructive" className="max-w-md mb-4 bg-red-900/20 border-red-900/50">
+                    <AlertCircle className="h-4 w-4 text-red-400" />
+                    <AlertTitle className="text-red-400">Error</AlertTitle>
+                    <AlertDescription className="text-red-300">
+                        {error?.message || "Failed to load trades"}
+                    </AlertDescription>
+                </Alert>
+                <Button
+                    onClick={fetchTrades}
+                    variant="outline"
+                    className="gap-2 border-white/20 text-white hover:bg-white/10"
+                >
+                    <RefreshCcw className="h-4 w-4" />
+                    Retry
+                </Button>
+            </Card>
+        )
+    }
 
     return (
         <Card className="bg-white/5 border-white/10 p-0 overflow-hidden">
@@ -195,77 +236,87 @@ export function TradeSettlementTable() {
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto relative max-h-[600px]">
                 <table className="w-full text-left text-sm text-gray-400">
-                    <thead className="bg-black/20 text-gray-500 font-mono text-xs uppercase">
+                    <thead className="bg-muted/80 backdrop-blur-md sticky top-0 z-10 text-gray-500 font-mono text-[10px] uppercase tracking-wider">
                         <tr>
-                            <th className="p-4">Created</th>
-                            <th className="p-4">Ends In</th>
-                            <th className="p-4">User</th>
-                            <th className="p-4">Asset</th>
-                            <th className="p-4">Direction</th>
-                            <th className="p-4 text-right">Stake</th>
-                            <th className="p-4 text-right">Payout %</th>
-                            <th className="p-4 text-center">Actions</th>
+                            <th className="px-4 py-3">Created</th>
+                            <th className="px-4 py-3">Ends In</th>
+                            <th className="px-4 py-3">User</th>
+                            <th className="px-4 py-3">Asset</th>
+                            <th className="px-4 py-3">Direction</th>
+                            <th className="px-4 py-3 text-right">Stake</th>
+                            <th className="px-4 py-3 text-right">Payout %</th>
+                            <th className="px-4 py-3 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                         {filteredTrades.length === 0 && !isLoading && (
                             <tr>
-                                <td colSpan={8} className="p-8 text-center text-gray-600">No matching trades found</td>
+                                <td colSpan={8} className="p-0">
+                                    <TableEmptyState 
+                                        title="No matching trades found"
+                                        description="Active binary option trades will appear here once users place them."
+                                    />
+                                </td>
                             </tr>
                         )}
                         {filteredTrades.map(trade => (
-                            <tr key={trade.id} className="hover:bg-white/5 transition-colors">
-                                <td className="p-4 font-mono text-xs">
-                                    {trade.created_at ? new Date(trade.created_at).toLocaleTimeString() : "-"}
+                            <tr key={trade.id} className="hover:bg-white/5 transition-colors group">
+                                <td className="px-4 py-2 font-mono text-[10px]">
+                                    {trade.created_at ? new Date(trade.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
                                 </td>
-                                <td className="p-4 font-mono text-xs text-amber-500 font-bold">
+                                <td className="px-4 py-2 font-mono text-[10px] text-amber-500 font-bold">
                                     {formatCountdown(trade.end_time)}
                                 </td>
-                                <td className="p-4 text-white">
-                                    {trade.user_email || "Unknown User"}
-                                    <div className="text-[10px] text-gray-600 font-mono">
-                                        {trade.user_id ? `${trade.user_id.slice(0, 8)}...` : "Unknown ID"}
+                                <td className="px-4 py-2">
+                                    <div className="flex flex-col">
+                                        <span className="text-white font-medium text-xs leading-none mb-1">{trade.user_email || "Unknown User"}</span>
+                                        <span className="text-[9px] text-gray-600 font-mono uppercase tracking-tighter">
+                                            {trade.user_id ? trade.user_id.slice(0, 12) : "Unknown ID"}
+                                        </span>
                                     </div>
                                 </td>
-                                <td className="p-4 font-bold text-white">{trade.asset_symbol || "-"}</td>
-                                <td className="p-4">
-                                    <Badge className={`${trade.direction === 'UP' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>
-                                        {trade.direction === 'UP' ? <TrendingUp size={14} className="mr-1" /> : <TrendingDown size={14} className="mr-1" />}
+                                <td className="px-4 py-2 font-bold text-white text-xs">{trade.asset_symbol || "-"}</td>
+                                <td className="px-4 py-2">
+                                    <Badge variant="outline" className={cn(
+                                        "text-[10px] py-0 gap-1",
+                                        trade.direction === 'UP' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                                    )}>
+                                        {trade.direction === 'UP' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                                         {trade.direction === 'UP' ? 'HIGH' : 'LOW'}
                                     </Badge>
                                 </td>
-                                <td className="p-4 text-right font-mono text-white">${trade.amount}</td>
-                                <td className="p-4 text-right font-mono text-amber-500">{trade.payout_rate}%</td>
-                                <td className="p-4">
-                                    <div className="flex justify-center gap-2">
+                                <td className="px-4 py-2 text-right font-mono text-white text-xs font-bold">${trade.amount}</td>
+                                <td className="px-4 py-2 text-right font-mono text-amber-500 text-[10px]">{trade.payout_rate}%</td>
+                                <td className="px-4 py-2">
+                                    <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Button
                                             size="sm"
-                                            onClick={() => handleSettle(trade.id, 'WIN')}
+                                            onClick={() => setConfirmTarget({ tradeId: trade.id, outcome: 'WIN' })}
                                             disabled={!!processingId}
-                                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-900/20"
+                                            className="h-7 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px]"
                                         >
-                                            {processingId === trade.id ? <Loader2 className="animate-spin" /> : <CheckCircle size={16} className="mr-1" />}
+                                            {processingId === trade.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle size={12} className="mr-1" />}
                                             WIN
                                         </Button>
                                         <Button
                                             size="sm"
-                                            onClick={() => handleSettle(trade.id, 'LOSS')}
+                                            onClick={() => setConfirmTarget({ tradeId: trade.id, outcome: 'LOSS' })}
                                             disabled={!!processingId}
-                                            className="bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg shadow-rose-900/20"
+                                            className="h-7 px-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px]"
                                         >
-                                            {processingId === trade.id ? <Loader2 className="animate-spin" /> : <XCircle size={16} className="mr-1" />}
+                                            {processingId === trade.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle size={12} className="mr-1" />}
                                             LOSS
                                         </Button>
                                         <Button
                                             size="sm"
-                                            variant="outline"
+                                            variant="ghost"
                                             onClick={() => openAudit(trade.id)}
-                                            className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                                            className="h-7 w-7 p-0 text-gray-500 hover:bg-white/10"
+                                            title="History"
                                         >
-                                            <History className="h-4 w-4 mr-1" />
-                                            History
+                                            <History className="h-3.5 w-3.5" />
                                         </Button>
                                     </div>
                                 </td>
@@ -347,6 +398,32 @@ export function TradeSettlementTable() {
                             </table>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!confirmTarget} onOpenChange={() => setConfirmTarget(null)}>
+                <DialogContent className="bg-card border-border">
+                    <DialogHeader>
+                        <DialogTitle>Confirm Settlement</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to settle this trade as <strong>{confirmTarget?.outcome}</strong>?
+                            {confirmTarget?.outcome === 'WIN' 
+                                ? " This will credit the user's balance with the payout amount." 
+                                : " This will result in a total loss of the stake for the user."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end gap-2 mt-4">
+                        <Button variant="outline" onClick={() => setConfirmTarget(null)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            variant={confirmTarget?.outcome === 'WIN' ? "default" : "destructive"}
+                            className={confirmTarget?.outcome === 'WIN' ? "bg-emerald-600 hover:bg-emerald-500" : ""}
+                            onClick={() => confirmTarget && handleSettle(confirmTarget.tradeId, confirmTarget.outcome)}
+                        >
+                            Confirm {confirmTarget?.outcome}
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </Card>
