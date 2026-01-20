@@ -1,10 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { updateSession } from "@/lib/supabase/proxy"
-import { adminAuthMiddleware } from "@/lib/middleware/admin-auth"
 
 export default async function proxy(request: NextRequest) {
   const hostname = request.nextUrl.hostname
-  const { pathname } = request.nextUrl
 
   // Domain Enforcement
   if (process.env.NODE_ENV === "production") {
@@ -14,17 +12,9 @@ export default async function proxy(request: NextRequest) {
     }
   }
 
-  // Update session for all requests
-  const sessionResponse = await updateSession(request)
-
-  // Apply admin auth to all /admin routes except login
-  // Also protect API routes under /api/admin
-  if ((pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) ||
-      pathname.startsWith('/api/admin')) {
-    return await adminAuthMiddleware(request)
-  }
-
-  return sessionResponse
+  // updateSession handles both session management and admin authentication
+  // See lib/supabase/proxy.ts lines 54-90 for admin route protection
+  return await updateSession(request)
 }
 
 export const config = {
