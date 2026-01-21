@@ -1,21 +1,17 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-const NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_URL = process.env.SUPABASE_URL
-const NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY
-
 const adminStatusCache = new Map<string, { isAdmin: boolean; timestamp: number }>()
 const ADMIN_CACHE_DURATION = 1 * 60 * 1000 // 1 minute
 
-
 export async function updateSession(request: NextRequest) {
-  const supabaseUrl = NEXT_PUBLIC_SUPABASE_URL || SUPABASE_URL
-  const supabaseAnonKey = NEXT_PUBLIC_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.next({ request })
+    throw new Error(
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
+    )
   }
 
   const { supabase, response } = createClient(request, supabaseUrl, supabaseAnonKey)
