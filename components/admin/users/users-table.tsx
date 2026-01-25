@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Shield, Wallet, Eye, ExternalLink } from "lucide-react"
+import { MoreHorizontal, Shield, Wallet, Eye, ExternalLink, UserCog } from "lucide-react"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { AdminDataTable } from "@/components/admin/data-table"
 import {
     Dialog,
@@ -24,7 +25,16 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { toast } from "sonner"
+import { adminFreezeUser } from "@/lib/admin-rpc"
+import { UserRoleDialog } from "./user-role-dialog"
 
 type UserProfile = {
     id: string
@@ -38,23 +48,38 @@ type UserProfile = {
 
 export function UsersTable({ initialData }: { initialData: any[] }) {
     const [freezeTarget, setFreezeTarget] = useState<UserProfile | null>(null)
+    const [roleDialogUser, setRoleDialogUser] = useState<UserProfile | null>(null)
     const [isFreezing, setIsFreezing] = useState(false)
+    const [roleFilter, setRoleFilter] = useState<string>("all")
+    const [statusFilter, setStatusFilter] = useState<string>("all")
+    const router = useRouter()
 
     const handleFreeze = async () => {
         if (!freezeTarget) return
         setIsFreezing(true)
         try {
-            // Mocking the backend call as per instructions not to touch logic, 
-            // but providing the UI flow.
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            toast.success(`Account ${freezeTarget.email} has been frozen`)
-            setFreezeTarget(null)
+            const shouldFreeze = freezeTarget.status !== 'frozen'
+            const result = await adminFreezeUser(freezeTarget.id, shouldFreeze)
+
+            if (result.success) {
+                toast.success(result.message || `User status updated`)
+                setFreezeTarget(null)
+                router.refresh()
+            } else {
+                toast.error(result.error || "Failed to update user status")
+            }
         } catch (error) {
-            toast.error("Failed to freeze account")
+            toast.error("An unexpected error occurred")
         } finally {
             setIsFreezing(false)
         }
     }
+
+    const filteredData = initialData.filter(user => {
+        const roleMatch = roleFilter === "all" || user.role === roleFilter
+        const statusMatch = statusFilter === "all" || user.status === statusFilter
+        return roleMatch && statusMatch
+    })
 
     const columns: ColumnDef<UserProfile>[] = [
         {
@@ -118,6 +143,8 @@ export function UsersTable({ initialData }: { initialData: any[] }) {
             header: () => <div className="text-right">Actions</div>,
             cell: ({ row }) => {
                 const user = row.original
+                const isFrozen = user.status === 'frozen'
+
                 return (
                     <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                         <DropdownMenu>
@@ -135,14 +162,20 @@ export function UsersTable({ initialData }: { initialData: any[] }) {
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-white/5" />
+                                <DropdownMenuItem
+                                    className="cursor-pointer"
+                                    onClick={() => setRoleDialogUser(user)}
+                                >
+                                    <UserCog className="mr-2 h-4 w-4" /> Edit Role
+                                </DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer">
                                     <Wallet className="mr-2 h-4 w-4" /> Manage Balances
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                     className="text-red-500 focus:text-red-500 cursor-pointer"
                                     onClick={() => setFreezeTarget(user)}
                                 >
-                                    <Shield className="mr-2 h-4 w-4" /> Freeze Account
+                                    <Shield className="mr-2 h-4 w-4" /> {isFrozen ? "Unfreeze Account" : "Freeze Account"}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -153,10 +186,35 @@ export function UsersTable({ initialData }: { initialData: any[] }) {
     ]
 
     return (
-        <>
+        <div className="space-y-4">
+            <div className="flex gap-2">
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="w-[150px] bg-card/50 border-white/10">
+                        <SelectValue placeholder="Filter Role" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#121212] border-white/10 text-white">
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="trader">Trader</SelectItem>
+                        <SelectItem value="moderator">Moderator</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[150px] bg-card/50 border-white/10">
+                        <SelectValue placeholder="Filter Status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#121212] border-white/10 text-white">
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="frozen">Frozen</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
             <AdminDataTable
                 columns={columns}
-                data={initialData}
+                data={filteredData}
                 searchKey="email"
                 searchPlaceholder="Search by email..."
             />
@@ -164,22 +222,28 @@ export function UsersTable({ initialData }: { initialData: any[] }) {
             <Dialog open={!!freezeTarget} onOpenChange={() => setFreezeTarget(null)}>
                 <DialogContent className="bg-card border-border">
                     <DialogHeader>
-                        <DialogTitle>Freeze Account</DialogTitle>
+                        <DialogTitle>{freezeTarget?.status === 'frozen' ? "Unfreeze Account" : "Freeze Account"}</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to freeze the account for <strong>{freezeTarget?.email}</strong>? 
-                            This will prevent the user from trading or withdrawing funds until the account is unfrozen.
+                            Are you sure you want to {freezeTarget?.status === 'frozen' ? "enable" : "disable"} the account for <strong>{freezeTarget?.email}</strong>?
+                            {freezeTarget?.status !== 'frozen' && " This will prevent the user from trading or withdrawing funds until the account is unfrozen."}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setFreezeTarget(null)} disabled={isFreezing}>
+                        <Button variant="outline" onClick={() => setFreezeTarget(null)} disabled={isFreezing} className="border-white/10 hover:bg-white/5">
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={handleFreeze} disabled={isFreezing}>
-                            {isFreezing ? "Freezing..." : "Confirm Freeze"}
+                        <Button variant={freezeTarget?.status === 'frozen' ? "default" : "destructive"} onClick={handleFreeze} disabled={isFreezing}>
+                            {isFreezing ? "Processing..." : (freezeTarget?.status === 'frozen' ? "Confirm Unfreeze" : "Confirm Freeze")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </>
+
+            <UserRoleDialog
+                user={roleDialogUser}
+                open={!!roleDialogUser}
+                onOpenChange={(open) => !open && setRoleDialogUser(null)}
+            />
+        </div>
     )
 }

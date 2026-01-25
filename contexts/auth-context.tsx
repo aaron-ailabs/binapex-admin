@@ -153,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       roleCache.delete(user.id)
     }
-    router.push("/login")
+    router.push("/admin/login")
   }
 
   return (

@@ -40,12 +40,11 @@ export async function adminAuthMiddleware(request: NextRequest) {
         return NextResponse.redirect(url);
     }
 
-    // Check 2: User must have admin role in metadata
-    // We check raw metadata or app_metadata depending on setup. Audit Plan uses user_metadata.
-    const adminRole = user.user_metadata?.role;
-    if (adminRole !== 'admin') {
-        // Log unauthorized access attempt
-        console.warn(`Unauthorized admin access attempt by user ${user.id} with role ${adminRole}`);
+    // Check 2: Admin authorization MUST NOT use user_metadata/app_metadata.
+    // Metadata is user-controlled; using it for authorization is a privilege escalation vector.
+    const { data: isAdmin, error: isAdminError } = await supabase.rpc('is_admin');
+    if (isAdminError || isAdmin !== true) {
+        console.warn(`Unauthorized admin access attempt by user ${user.id} (is_admin=${String(isAdmin)}, err=${isAdminError?.message})`);
 
         // In middleware, returning valid JSON for API routes or Redirect for pages?
         // Request path check:

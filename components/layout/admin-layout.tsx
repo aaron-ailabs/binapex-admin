@@ -11,7 +11,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <AdminSidebar />
       <SidebarInset>
         <SiteHeader />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 max-w-[1600px] w-full mx-auto">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] max-w-[1600px] w-full mx-auto">
           {children}
         </main>
       </SidebarInset>

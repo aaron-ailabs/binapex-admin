@@ -62,15 +62,19 @@ export function useSupportChat({
         throw new Error("No conversation ID")
       }
 
+      console.log('Sending message:', { conversationId, message })
       const { data, error: sendError } = await supabase.rpc("send_support_message", {
         p_conversation_id: conversationId,
         p_message: message,
       })
 
       if (sendError) {
+        console.error('RPC Error sending message:', sendError)
         logError("API send_support_message", sendError)
         throw new Error(sendError.message || "Failed to send message")
       }
+
+      console.log('Message sent successfully:', data)
 
       // Message will be added via Realtime, but we can optimistically add it
       // Actually, let's rely on Realtime for consistency

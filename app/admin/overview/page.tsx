@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { AdminRoute } from "@/components/admin/admin-route"
 
 export const dynamic = "force-dynamic"
 
@@ -42,12 +43,13 @@ export default async function AdminOverviewPage() {
     }
 
     return (
-        <AdminLayout>
-            <div className="space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
-                    <p className="text-muted-foreground mt-1">Monitor platform activity in real-time</p>
-                </div>
+        <AdminRoute>
+            <AdminLayout>
+                <div className="space-y-6">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
+                        <p className="text-muted-foreground mt-1">Monitor platform activity in real-time</p>
+                    </div>
 
                 {/* KPI Grid - Legacy UI had 3 cards usually, but we have 4 metrics. We'll show 3 primary per 'Old UI' image if possible, but 4 is better for info. 
                    The Old UI image shows: Active Users, Pending Deposits, Open Trades. (3 cards).
@@ -142,7 +144,8 @@ export default async function AdminOverviewPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
-        </AdminLayout>
+                </div>
+            </AdminLayout>
+        </AdminRoute>
     )
 }

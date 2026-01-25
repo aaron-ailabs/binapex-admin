@@ -41,6 +41,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   themeColor: "#0a0a0a",
+  viewportFit: "cover",
 }
 
 export default function RootLayout({
@@ -56,11 +57,11 @@ export default function RootLayout({
         <ErrorBoundary>
           <AuthProvider>
             {children}
+            <GlobalAdminNotificationListener />
           </AuthProvider>
         </ErrorBoundary>
         <Analytics />
         <Toaster position="top-right" />
-        <GlobalAdminNotificationListener />
       </body>
     </html>
   )

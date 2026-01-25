@@ -47,10 +47,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid amount or leverage" }), { status: 400 })
     }
 
-    // Fetch user profile
+    // Fetch user profile - try both balance and balance_usd
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, balance")
+      .select("id, balance, balance_usd")
       .eq("id", user.id)
       .single()
 
@@ -58,13 +58,15 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Profile not found" }), { status: 404 })
     }
 
+    const availableBalance = profile.balance_usd !== undefined ? profile.balance_usd : profile.balance;
+
     // Check balance
-    if (profile.balance < amount) {
+    if (availableBalance < amount) {
       return new Response(
         JSON.stringify({
           error: "Insufficient balance",
           required: amount,
-          available: profile.balance,
+          available: availableBalance,
         }),
         { status: 400 },
       )

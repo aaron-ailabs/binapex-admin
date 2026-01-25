@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  basePath: '/admin',
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -10,6 +11,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  output: 'standalone',
   async headers() {
     return [
       {

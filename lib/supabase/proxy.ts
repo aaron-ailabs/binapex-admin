@@ -51,7 +51,8 @@ export async function updateSession(request: NextRequest) {
       if (!user) {
         console.log("[Middleware] Admin route accessed without authentication, redirecting to login")
         if (pathname.startsWith("/api/")) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+          // return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+          return redirectTo(request, "/admin/login")
         }
         return redirectTo(request, "/admin/login")
       }
@@ -77,7 +78,8 @@ export async function updateSession(request: NextRequest) {
       if (!isAdmin) {
         console.warn("[Middleware] Non-admin user attempted to access admin route:", user.email)
         if (pathname.startsWith("/api/")) {
-          return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+          // return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+          return redirectTo(request, "/admin/login")
         }
         return redirectTo(request, "/admin/login")
       }

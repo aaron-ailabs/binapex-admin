@@ -94,10 +94,13 @@ export function NotificationCenter() {
                 { event: "*", schema: "public", table: "admin_notifications" },
                 () => fetchNotifications()
             )
-            .subscribe()
+            .subscribe((status) => {
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('Realtime subscription error for admin_notification_center')
+                }
+            })
 
         return () => {
-            channel.unsubscribe()
             supabase.removeChannel(channel)
         }
     }, [supabase, user])

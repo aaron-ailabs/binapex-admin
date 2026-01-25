@@ -8,11 +8,13 @@ import { Card } from "@/components/ui/card"
 import { Loader2, TrendingUp, TrendingDown, CheckCircle, XCircle, History, AlertCircle, RefreshCcw } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useDeterministicFetch } from "@/hooks/use-deterministic-fetch"
 import { AdminLoader } from "@/components/ui/admin-loader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { logError, logInfo } from "@/lib/utils"
+import { cn, logError, logInfo } from "@/lib/utils"
+import { TableEmptyState } from "./table-empty-state"
 
 interface SettlementAudit {
     id: string
@@ -38,8 +40,9 @@ interface Trade {
 }
 
 export function TradeSettlementTable() {
+    const { user } = useAuth()
     const supabase = useMemo(() => createClient(), [])
-    
+
     const fetchTradesFn = useCallback(async () => {
         const { data: tradesData, error } = await supabase
             .from('orders')
@@ -63,11 +66,11 @@ export function TradeSettlementTable() {
         return []
     }, [supabase])
 
-    const { 
-        data: trades = [], 
-        status, 
-        error, 
-        retry: fetchTrades, 
+    const {
+        data: trades = [],
+        status,
+        error,
+        retry: fetchTrades,
         isLoading,
         setData: setTrades
     } = useDeterministicFetch({
@@ -122,6 +125,7 @@ export function TradeSettlementTable() {
     }
 
     useEffect(() => {
+        if (!user) return
         fetchTrades()
         const interval = setInterval(() => setNow(Date.now()), 1000)
 
@@ -136,14 +140,18 @@ export function TradeSettlementTable() {
                 logInfo("Realtime", "Order change detected", payload)
                 fetchTrades() // Refresh list on any change
             })
-            .subscribe()
+            .subscribe((status) => {
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('Realtime subscription error for admin_trades_all')
+                }
+            })
 
         return () => {
             channel.unsubscribe()
             supabase.removeChannel(channel)
             clearInterval(interval)
         }
-    }, [fetchTrades, supabase])
+    }, [fetchTrades, supabase, user])
 
     const formatCountdown = (endTime: string | null | undefined) => {
         if (!endTime) return "--:--"
@@ -254,7 +262,7 @@ export function TradeSettlementTable() {
                         {filteredTrades.length === 0 && !isLoading && (
                             <tr>
                                 <td colSpan={8} className="p-0">
-                                    <TableEmptyState 
+                                    <TableEmptyState
                                         title="No matching trades found"
                                         description="Active binary option trades will appear here once users place them."
                                     />
@@ -407,8 +415,8 @@ export function TradeSettlementTable() {
                         <DialogTitle>Confirm Settlement</DialogTitle>
                         <DialogDescription>
                             Are you sure you want to settle this trade as <strong>{confirmTarget?.outcome}</strong>?
-                            {confirmTarget?.outcome === 'WIN' 
-                                ? " This will credit the user's balance with the payout amount." 
+                            {confirmTarget?.outcome === 'WIN'
+                                ? " This will credit the user's balance with the payout amount."
                                 : " This will result in a total loss of the stake for the user."}
                         </DialogDescription>
                     </DialogHeader>
@@ -416,7 +424,7 @@ export function TradeSettlementTable() {
                         <Button variant="outline" onClick={() => setConfirmTarget(null)}>
                             Cancel
                         </Button>
-                        <Button 
+                        <Button
                             variant={confirmTarget?.outcome === 'WIN' ? "default" : "destructive"}
                             className={confirmTarget?.outcome === 'WIN' ? "bg-emerald-600 hover:bg-emerald-500" : ""}
                             onClick={() => confirmTarget && handleSettle(confirmTarget.tradeId, confirmTarget.outcome)}

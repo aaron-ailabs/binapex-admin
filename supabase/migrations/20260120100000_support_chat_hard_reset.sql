@@ -123,25 +123,13 @@ CREATE POLICY "Users can update own conversations"
 CREATE POLICY "Admins can view all conversations"
     ON public.support_conversations
     FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.role = 'admin'
-        )
-    );
+    USING (public.is_admin());
 
 -- Admins can update ALL conversations (e.g., close them)
 CREATE POLICY "Admins can update all conversations"
     ON public.support_conversations
     FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.role = 'admin'
-        )
-    );
+    USING (public.is_admin());
 
 -- ============================================
 -- RLS Policies for support_messages
@@ -174,24 +162,14 @@ CREATE POLICY "Users can insert own conversation messages"
 CREATE POLICY "Admins can view all messages"
     ON public.support_messages
     FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.role = 'admin'
-        )
-    );
+    USING (public.is_admin());
 
 -- Admins can insert messages in ANY conversation
 CREATE POLICY "Admins can insert messages"
     ON public.support_messages
     FOR INSERT
     WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.role = 'admin'
-        )
+        public.is_admin()
         AND sender_id = auth.uid()
     );
 
@@ -284,13 +262,8 @@ BEGIN
         RAISE EXCEPTION 'Conversation not found';
     END IF;
 
-    -- Get user role
-    SELECT role INTO v_user_role
-    FROM public.profiles
-    WHERE id = v_user_id;
-
     -- Determine sender_role
-    IF v_user_role = 'admin' THEN
+    IF public.is_admin() THEN
         v_sender_role := 'ADMIN';
     ELSE
         v_sender_role := 'USER';
@@ -341,29 +314,15 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, auth
 AS $$
-DECLARE
-    v_user_id UUID;
-    v_user_role TEXT;
 BEGIN
-    -- Get current user
-    v_user_id := auth.uid();
-
-    IF v_user_id IS NULL THEN
-        RAISE EXCEPTION 'Not authenticated';
+    -- Check if caller is admin
+    IF NOT public.is_admin() THEN
+        RAISE EXCEPTION 'Only admins can close conversations';
     END IF;
 
-    -- Verify user is admin
-    SELECT role INTO v_user_role
-    FROM public.profiles
-    WHERE id = v_user_id;
-
-    IF v_user_role != 'admin' THEN
-        RAISE EXCEPTION 'Admin access required';
-    END IF;
-
-    -- Close the conversation
     UPDATE public.support_conversations
-    SET status = 'CLOSED', updated_at = NOW()
+    SET status = 'CLOSED',
+        updated_at = NOW()
     WHERE id = p_conversation_id;
 
     RETURN TRUE;

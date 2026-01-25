@@ -105,9 +105,12 @@ export function SuggestionBoard() {
         const channel = supabase
             .channel('admin_suggestions_board')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_suggestions' }, fetchSuggestions)
-            .subscribe()
+            .subscribe((status) => {
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('Realtime subscription error for admin_suggestions_board')
+                }
+            })
         return () => { 
-            channel.unsubscribe()
             supabase.removeChannel(channel) 
         }
     }, [supabase, user])
@@ -125,9 +128,12 @@ export function SuggestionBoard() {
             }, (payload) => {
                 setComments(prev => [...prev, payload.new as Comment])
             })
-            .subscribe()
+            .subscribe((status) => {
+                if (status === 'CHANNEL_ERROR') {
+                    console.error(`Realtime subscription error for comments_${selectedSuggestion.id}`)
+                }
+            })
         return () => { 
-            channel.unsubscribe()
             supabase.removeChannel(channel) 
         }
     }, [selectedSuggestion, supabase, user])

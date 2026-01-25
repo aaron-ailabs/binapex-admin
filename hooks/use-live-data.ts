@@ -51,10 +51,11 @@ export function useLiveData<T extends { id?: string }>(
     setRows(sortBy(initialRows, sortOptions))
   }, [initialSignature])
 
+  const supabase = useMemo(() => createClient(), [])
+
   useEffect(() => {
     if (!user) return
 
-    const supabase = createClient()
     let channel: RealtimeChannel | null = null
 
     channel = supabase
@@ -90,7 +91,11 @@ export function useLiveData<T extends { id?: string }>(
           })
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`Realtime subscription error for live:${table}`)
+        }
+      })
 
     return () => {
       if (channel) {
@@ -98,7 +103,7 @@ export function useLiveData<T extends { id?: string }>(
         supabase.removeChannel(channel)
       }
     }
-  }, [table, user])
+  }, [table, user, supabase, sortOptions])
 
   return rows
 }

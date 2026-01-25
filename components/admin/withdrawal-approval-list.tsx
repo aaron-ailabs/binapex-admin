@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { format } from "date-fns"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +15,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { useDeterministicFetch } from "@/hooks/use-deterministic-fetch"
 import { AdminLoader } from "@/components/ui/admin-loader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { cn, logError, logInfo } from "@/lib/utils"
+import { TableEmptyState } from "./table-empty-state"
 
 interface Withdrawal {
   id: string
@@ -58,12 +61,12 @@ export function WithdrawalApprovalList() {
     return data as Withdrawal[]
   }, [supabase])
 
-  const { 
-    data: withdrawals = [], 
-    status, 
-    error, 
-    retry: fetchWithdrawals, 
-    isLoading: loading 
+  const {
+    data: withdrawals = [],
+    status,
+    error,
+    retry: fetchWithdrawals,
+    isLoading: loading
   } = useDeterministicFetch({
     fn: fetchWithdrawalsFn,
     timeoutMs: 10000,
@@ -81,9 +84,8 @@ export function WithdrawalApprovalList() {
   const [approveSubmitting, setApproveSubmitting] = useState(false)
 
   useEffect(() => {
-    fetchWithdrawals()
-
     if (!user) return
+    fetchWithdrawals()
 
     const channel = supabase
       .channel("withdrawal-approvals")
@@ -99,7 +101,11 @@ export function WithdrawalApprovalList() {
           fetchWithdrawals()
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Realtime subscription error for withdrawal-approvals')
+        }
+      })
 
     return () => {
       channel.unsubscribe()
@@ -304,7 +310,7 @@ export function WithdrawalApprovalList() {
                 {filteredWithdrawals.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center p-0">
-                      <TableEmptyState 
+                      <TableEmptyState
                         title="No withdrawals match the current filters"
                         description="Try adjusting your search query or status filter to see more requests."
                       />
@@ -438,7 +444,7 @@ export function WithdrawalApprovalList() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Status</label>
-              <Badge
+                  <Badge
                     variant={
                       selectedWithdrawal.status === "PENDING"
                         ? "secondary"

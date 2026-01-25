@@ -62,11 +62,15 @@ export function ActiveTradesTable({ data }: { data: any[] }) {
         {
             accessorKey: "direction",
             header: "Direction",
-            cell: ({ row }) => (
-                <Badge variant="outline" className={row.original.direction === 'call' ? "text-green-500 border-green-500/20" : "text-red-500 border-red-500/20"}>
-                    {row.original.direction.toUpperCase()}
-                </Badge>
-            )
+            cell: ({ row }) => {
+                const direction = row.original.direction?.toLowerCase()
+                const isUp = direction === 'call' || direction === 'up'
+                return (
+                    <Badge variant="outline" className={isUp ? "text-green-500 border-green-500/20" : "text-red-500 border-red-500/20"}>
+                        {(row.original.direction || 'N/A').toUpperCase()}
+                    </Badge>
+                )
+            }
         },
         {
             accessorKey: "amount",

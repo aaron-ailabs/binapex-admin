@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { AdminLayout } from "@/components/layout/admin-layout"
 import { AdminRoute } from "@/components/admin/admin-route"
-import { AdminAssetRow } from "@/components/admin/admin-asset-row"
+import { AssetsTable } from "@/components/admin/assets/assets-table"
 import { GlassCard } from "@/components/ui/glass-card"
 
 export const dynamic = "force-dynamic"

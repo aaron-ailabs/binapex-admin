@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { TableEmptyState } from "@/components/admin/table-empty-state"
 import { ArrowLeft, Loader2, MessageCircle, X, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ChatMessageList } from "./chat-message-list"
@@ -104,10 +105,13 @@ export function AdminChatPanel() {
           loadConversations()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Realtime subscription error for admin_conversations')
+        }
+      })
 
     return () => {
-      channel.unsubscribe()
       supabase.removeChannel(channel)
     }
   }, [loadConversations, supabase, user])
@@ -195,7 +199,7 @@ export function AdminChatPanel() {
             </div>
           ) : conversations.length === 0 ? (
             <div className="flex h-full items-center justify-center p-0">
-              <TableEmptyState 
+              <TableEmptyState
                 title="No conversations yet"
                 description="New support requests will appear here once users initiate a chat."
                 icon={MessageCircle}
@@ -219,7 +223,7 @@ export function AdminChatPanel() {
                       "cursor-pointer transition-colors relative group",
                       "hover:bg-muted/50",
                       selectedConversationId === conversation.conversation_id &&
-                        "bg-muted/80 border-l-4 border-l-gold"
+                      "bg-muted/80 border-l-4 border-l-gold"
                     )}
                   >
                     <td className="px-4 py-3 min-w-0">

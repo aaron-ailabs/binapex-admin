@@ -151,6 +151,9 @@ export function useAdminRealtime() {
       .subscribe((state) => {
         setIsConnected(state === "SUBSCRIBED")
         logInfo("Realtime", `admin-updates ${state}`)
+        if (state === 'CHANNEL_ERROR') {
+          console.error('Realtime subscription error for admin-updates')
+        }
       })
 
     return () => {

@@ -40,27 +40,61 @@ serve(async (req) => {
         )
     }
 
-    // Get asset id
-    const { data: asset, error: assetError } = await supabaseClient
+    // Get asset id with flexible matching
+    const { data: assets, error: assetsError } = await supabaseClient
         .from('assets')
-        .select('id')
-        .eq('symbol', symbol)
-        .single()
+        .select('id, symbol')
 
-    if (assetError || !asset) {
+    if (assetsError) throw assetsError
+
+    const asset = assets.find(a => 
+      a.symbol === symbol || 
+      a.symbol === symbol.replace('-', '/') || 
+      a.symbol === symbol.replace('/', '-')
+    )
+
+    if (!asset) {
         return new Response(
-            JSON.stringify({ error: 'Asset not found' }),
+            JSON.stringify({ error: `Asset not found: ${symbol}` }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
     }
 
-    // Insert order (Using Service Role would be safer for balance checks etc, but following schema for now)
-    // For a real app, we should check balance here before placing order.
-    // Assuming 'orders' table RLS allows insert for authenticated users, or we use service role here for full control.
+    // Check balance before placing order
+    const { data: profile, error: profileError } = await supabaseClient
+        .from('profiles')
+        .select('balance_usd, balance')
+        .eq('id', user.id)
+        .single()
     
-    // Switch to service role client for order placement to bypass RLS complications if any, or strictly enforce server-side validation.
-    // Actually, let's stick to the authenticated client for now as per schema "Users can create orders".
-    // But realistically, a trading engine needs more checks.
+    if (profileError || !profile) {
+        return new Response(
+            JSON.stringify({ error: 'Profile not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+    }
+
+    const availableBalance = profile.balance_usd !== undefined ? profile.balance_usd : (profile.balance || 0);
+    
+    if (type === 'binary' || type === 'BINARY') {
+        // For binary trades, we should ideally use the RPC, but if we insert here,
+        // we must check balance.
+        if (availableBalance < size) {
+            return new Response(
+                JSON.stringify({ error: 'Insufficient balance' }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+        }
+    } else {
+        // For regular trades, we check balance based on size * price or just size for market
+        const cost = (price || 1) * size / (leverage || 1);
+        if (availableBalance < cost) {
+            return new Response(
+                JSON.stringify({ error: 'Insufficient balance' }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+        }
+    }
     
     const orderData = {
         user_id: user.id,

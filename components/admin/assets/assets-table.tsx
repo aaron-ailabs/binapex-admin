@@ -27,7 +27,10 @@ export function AssetsTable({ assets }: AssetsTableProps) {
               <tr>
                 <th className="px-6 py-3">Asset</th>
                 <th className="px-6 py-3 hidden md:table-cell">Name</th>
-                <th className="px-6 py-3">Payout Rate</th>
+                <th className="px-6 py-3 hidden md:table-cell">Category</th>
+                <th className="px-6 py-3">Price</th>
+                <th className="px-6 py-3">Payout</th>
+                <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>

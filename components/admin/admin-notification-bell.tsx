@@ -59,9 +59,8 @@ export function AdminNotificationBell() {
   }
 
   useEffect(() => {
-    fetchNotifications()
-
     if (!user) return
+    fetchNotifications()
 
     // Subscribe to new notifications
     const channel = supabase
@@ -88,7 +87,11 @@ export function AdminNotificationBell() {
           fetchNotifications()
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Realtime subscription error for admin_notifications_changes')
+        }
+      })
 
     return () => {
       channel.unsubscribe()
