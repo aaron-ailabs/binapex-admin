@@ -9,6 +9,7 @@ export interface ChatMessage {
   sender_id: string
   message: string
   created_at: string
+  attachment_url?: string | null
 }
 
 interface ChatBubbleProps {
@@ -66,6 +67,18 @@ export function ChatBubble({ message, isCurrentUser = false, senderName }: ChatB
           )}
         >
           {message.message}
+          {message.attachment_url && (
+            <div className="mt-2">
+              <a href={message.attachment_url} target="_blank" rel="noopener noreferrer" className="block relative overflow-hidden rounded-lg border border-black/10 transition-transform hover:scale-[1.02]">
+                <img
+                  src={message.attachment_url}
+                  alt="Attachment"
+                  className="max-h-60 w-full object-cover rounded-lg"
+                  loading="lazy"
+                />
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Timestamp */}

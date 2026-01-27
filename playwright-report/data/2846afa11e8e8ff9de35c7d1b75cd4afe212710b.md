@@ -1,0 +1,144 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - link "Binapex Logo" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - img "Binapex Logo" [ref=e10]
+        - generic [ref=e11]:
+          - generic [ref=e12]: BINAPEX
+          - generic [ref=e13]: Admin Portal
+      - generic [ref=e14]:
+        - list [ref=e15]:
+          - listitem [ref=e16]:
+            - link "Overview" [ref=e17] [cursor=pointer]:
+              - /url: /admin/overview
+              - img [ref=e18]
+              - generic [ref=e23]: Overview
+          - listitem [ref=e24]:
+            - link "Users" [ref=e25] [cursor=pointer]:
+              - /url: /admin/users
+              - img [ref=e26]
+              - generic [ref=e31]: Users
+          - listitem [ref=e32]:
+            - link "Finance" [ref=e33] [cursor=pointer]:
+              - /url: /admin/finance
+              - img [ref=e34]
+              - generic [ref=e36]: Finance
+          - listitem [ref=e37]:
+            - link "Assets" [ref=e38] [cursor=pointer]:
+              - /url: /admin/assets
+              - img [ref=e39]
+              - generic [ref=e42]: Assets
+          - listitem [ref=e43]:
+            - link "Withdrawals" [ref=e44] [cursor=pointer]:
+              - /url: /admin/withdrawals
+              - img [ref=e45]
+              - generic [ref=e47]: Withdrawals
+          - listitem [ref=e48]:
+            - link "Trades" [ref=e49] [cursor=pointer]:
+              - /url: /admin/trades
+              - img [ref=e50]
+              - generic [ref=e52]: Trades
+          - listitem [ref=e53]:
+            - link "Notifications" [ref=e54] [cursor=pointer]:
+              - /url: /admin/notifications
+              - img [ref=e55]
+              - generic [ref=e57]: Notifications
+          - listitem [ref=e58]:
+            - link "Suggestions" [ref=e59] [cursor=pointer]:
+              - /url: /admin/suggestions
+              - img [ref=e60]
+              - generic [ref=e62]: Suggestions
+          - listitem [ref=e63]:
+            - link "Support" [ref=e64] [cursor=pointer]:
+              - /url: /admin/support/chat
+              - img [ref=e65]
+              - generic [ref=e67]: Support
+          - listitem [ref=e68]:
+            - link "Settings" [ref=e69] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e70]
+              - generic [ref=e73]: Settings
+        - list
+      - list [ref=e75]:
+        - listitem [ref=e76]:
+          - button "Sign Out" [ref=e77]:
+            - img [ref=e78]
+            - generic [ref=e81]: Sign Out
+      - button "Toggle Sidebar" [ref=e82]
+    - main [ref=e83]:
+      - generic [ref=e84]:
+        - button "Toggle Sidebar" [ref=e86]:
+          - img
+          - generic [ref=e87]: Toggle Sidebar
+        - generic [ref=e88]:
+          - img [ref=e89]
+          - textbox "Search users, transactions, or settings..." [ref=e92]
+        - generic [ref=e93]:
+          - generic [ref=e95]:
+            - img
+            - generic [ref=e96]: Offline
+          - button [ref=e97]:
+            - img
+      - main [ref=e98]:
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - heading "Admin Dashboard" [level=1] [ref=e101]
+            - paragraph [ref=e102]: Monitor platform activity in real-time
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - generic [ref=e105]:
+                - generic [ref=e106]: Active Users
+                - img [ref=e108]
+              - generic [ref=e114]: "17"
+            - generic [ref=e115]:
+              - generic [ref=e116]:
+                - generic [ref=e117]: Pending Deposits
+                - img [ref=e119]
+              - generic [ref=e122]: "1"
+            - generic [ref=e123]:
+              - generic [ref=e124]:
+                - generic [ref=e125]: Open Trades
+                - img [ref=e127]
+              - generic [ref=e129]:
+                - generic [ref=e130]: "3"
+                - img [ref=e133]
+          - generic [ref=e136]:
+            - generic [ref=e137]:
+              - generic [ref=e138]:
+                - generic [ref=e139]: Recent Deposits
+                - link "View All" [ref=e140] [cursor=pointer]:
+                  - /url: /admin/finance
+              - generic [ref=e143]:
+                - generic [ref=e144]:
+                  - img [ref=e146]
+                  - generic [ref=e148]:
+                    - paragraph [ref=e149]: Deposit Request
+                    - paragraph [ref=e150]: admin88@binapex.my
+                - generic [ref=e151]:
+                  - paragraph [ref=e152]: +$400
+                  - text: pending
+            - generic [ref=e153]:
+              - generic [ref=e155]: Quick Actions
+              - generic [ref=e156]:
+                - link "Approve Deposits" [ref=e157] [cursor=pointer]:
+                  - /url: /admin/finance
+                  - img
+                  - text: Approve Deposits
+                - link "Support Chats" [ref=e158] [cursor=pointer]:
+                  - /url: /admin/support/chat
+                  - img
+                  - text: Support Chats
+                - link "Manage Users" [ref=e159] [cursor=pointer]:
+                  - /url: /admin/users
+                  - img
+                  - text: Manage Users
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e165] [cursor=pointer]:
+    - img [ref=e166]
+  - alert [ref=e169]
+```

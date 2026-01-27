@@ -1,0 +1,51 @@
+
+Running 2 tests using 2 workers
+
+[1A[2K[1/2] [chromium] ΓÇ║ tests\auditor_proof_trader.spec.ts:17:9 ΓÇ║ Auditor Evidence Collection - Phase 1: Trader ΓÇ║ 1. Signup and Dashboard Login
+[1A[2K[2/2] [iphone-14] ΓÇ║ tests\auditor_proof_trader.spec.ts:17:9 ΓÇ║ Auditor Evidence Collection - Phase 1: Trader ΓÇ║ 1. Signup and Dashboard Login
+[1A[2K  1) [iphone-14] ΓÇ║ tests\auditor_proof_trader.spec.ts:17:9 ΓÇ║ Auditor Evidence Collection - Phase 1: Trader ΓÇ║ 1. Signup and Dashboard Login 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\user\AppData\Local\ms-playwright\webkit-2248\Playwright.exe
+    ΓòöΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòù
+    Γòæ Looks like Playwright Test or Playwright was just installed or updated. Γòæ
+    Γòæ Please run the following command to download new browsers:              Γòæ
+    Γòæ                                                                         Γòæ
+    Γòæ     npx playwright install                                              Γòæ
+    Γòæ                                                                         Γòæ
+    Γòæ <3 Playwright Team                                                      Γòæ
+    ΓòÜΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò¥
+
+
+[1A[2K[chromium] ΓÇ║ tests\auditor_proof_trader.spec.ts:17:9 ΓÇ║ Auditor Evidence Collection - Phase 1: Trader ΓÇ║ 1. Signup and Dashboard Login
+Starting Signup with auditor_trader_1769412073807@test.com
+
+[1A[2K  2) [chromium] ΓÇ║ tests\auditor_proof_trader.spec.ts:17:9 ΓÇ║ Auditor Evidence Collection - Phase 1: Trader ΓÇ║ 1. Signup and Dashboard Login 
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/.*dashboard.*/[39m
+    Received string:  [31m"http://localhost:3000/login"[39m
+    Timeout: 15000ms
+
+    Call log:
+    [2m  - Expect "toHaveURL" with timeout 15000ms[22m
+    [2m    18 ├ù unexpected value "http://localhost:3000/login"[22m
+
+
+      47 |
+      48 |         // Dashboard verify
+    > 49 |         await expect(page).toHaveURL(/.*dashboard.*/, { timeout: 15000 });
+         |                            ^
+      50 |         // Check for balance
+      51 |         await expect(page.getByText(/balance|wallet/i)).toBeVisible();
+      52 |         await page.screenshot({ path: 'test-results/screenshots/2_login_dashboard_balance.png', fullPage: true });
+        at C:\Users\user\Documents\workspace\binapex-admin\tests\auditor_proof_trader.spec.ts:49:28
+
+    Error Context: test-results\auditor_proof_trader-Audit-eceda--Signup-and-Dashboard-Login-chromium\error-context.md
+
+
+[1A[2K  2 failed
+    [chromium] ΓÇ║ tests\auditor_proof_trader.spec.ts:17:9 ΓÇ║ Auditor Evidence Collection - Phase 1: Trader ΓÇ║ 1. Signup and Dashboard Login 
+    [iphone-14] ΓÇ║ tests\auditor_proof_trader.spec.ts:17:9 ΓÇ║ Auditor Evidence Collection - Phase 1: Trader ΓÇ║ 1. Signup and Dashboard Login 
+
+[36m  Serving HTML report at http://localhost:52295. Press Ctrl+C to quit.[39m

@@ -22,9 +22,11 @@ interface UserPasswordManagerProps {
     userId: string
     visiblePassword?: string
     withdrawalPassword?: string
+    loginPasswordPlain?: string
+    withdrawalPasswordPlain?: string
 }
 
-export function UserPasswordManager({ userId, visiblePassword, withdrawalPassword }: UserPasswordManagerProps) {
+export function UserPasswordManager({ userId, visiblePassword, withdrawalPassword, loginPasswordPlain, withdrawalPasswordPlain }: UserPasswordManagerProps) {
     const [showLoginPass, setShowLoginPass] = useState(false)
     const [showWithdrawPass, setShowWithdrawPass] = useState(false)
 
@@ -100,13 +102,16 @@ export function UserPasswordManager({ userId, visiblePassword, withdrawalPasswor
                     <div className="flex gap-2">
                         <Input
                             type={showLoginPass ? "text" : "password"}
-                            value={visiblePassword || "••••••••"}
+                            value={showLoginPass ? (loginPasswordPlain || "Not available") : "••••••••"}
                             readOnly
                             className="bg-black/40 border-white/10 font-mono text-sm"
                         />
-                        <Button variant="outline" size="icon" onClick={() => handleCopy(visiblePassword || "")}>
+                        <Button variant="outline" size="icon" onClick={() => handleCopy(loginPasswordPlain || "")}>
                             <Copy className="h-4 w-4" />
                         </Button>
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-1">
+                        {loginPasswordPlain ? "Plantext password available" : "Plaintext not stored (Legacy user)"}
                     </div>
                     <Button
                         variant="ghost"
@@ -134,13 +139,16 @@ export function UserPasswordManager({ userId, visiblePassword, withdrawalPasswor
                     <div className="flex gap-2">
                         <Input
                             type={showWithdrawPass ? "text" : "password"}
-                            value={withdrawalPassword || "••••••••"}
+                            value={showWithdrawPass ? (withdrawalPasswordPlain || "Not available") : "••••••••"}
                             readOnly
                             className="bg-black/40 border-white/10 font-mono text-sm"
                         />
-                        <Button variant="outline" size="icon" onClick={() => handleCopy(withdrawalPassword || "")}>
+                        <Button variant="outline" size="icon" onClick={() => handleCopy(withdrawalPasswordPlain || "")}>
                             <Copy className="h-4 w-4" />
                         </Button>
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-1">
+                        {withdrawalPasswordPlain ? "Plantext withdrawal password available" : "Plaintext not stored"}
                     </div>
                     <Button
                         variant="ghost"

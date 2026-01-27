@@ -1,0 +1,45 @@
+--- START ---
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [AuthContext] Initializing authentication...
+BROWSER: [AuthContext] No user session found
+BROWSER: [AuthContext] Initialization complete
+BROWSER: [AuthContext] Auth state changed: INITIAL_SESSION
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [Vercel Web Analytics] Failed to load script from /_vercel/insights/script.js. Be sure to enable Web Analytics for your project and deploy again. See https://vercel.com/docs/analytics/quickstart for more information.
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [AuthContext] Initializing authentication...
+BROWSER: [AuthContext] No user session found
+BROWSER: [AuthContext] Initialization complete
+BROWSER: [AuthContext] Auth state changed: INITIAL_SESSION
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [Vercel Web Analytics] Failed to load script from /_vercel/insights/script.js. Be sure to enable Web Analytics for your project and deploy again. See https://vercel.com/docs/analytics/quickstart for more information.
+BROWSER: [AuthContext] User signed out
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [AuthContext] Initializing authentication...
+BROWSER: [AuthContext] No user session found
+BROWSER: [AuthContext] Initialization complete
+BROWSER: [AuthContext] Auth state changed: INITIAL_SESSION
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [Vercel Web Analytics] Failed to load script from /_vercel/insights/script.js. Be sure to enable Web Analytics for your project and deploy again. See https://vercel.com/docs/analytics/quickstart for more information.
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [AuthContext] Initializing authentication...
+BROWSER: [AuthContext] No user session found
+BROWSER: [AuthContext] Initialization complete
+BROWSER: [AuthContext] Auth state changed: INITIAL_SESSION
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [Vercel Web Analytics] Failed to load script from /_vercel/insights/script.js. Be sure to enable Web Analytics for your project and deploy again. See https://vercel.com/docs/analytics/quickstart for more information.
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [AuthContext] Initializing authentication...
+BROWSER: [AuthContext] No user session found
+BROWSER: [AuthContext] Initialization complete
+BROWSER: [AuthContext] Auth state changed: INITIAL_SESSION
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [Vercel Web Analytics] Failed to load script from /_vercel/insights/script.js. Be sure to enable Web Analytics for your project and deploy again. See https://vercel.com/docs/analytics/quickstart for more information.
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [AuthContext] Initializing authentication...
+BROWSER: [AuthContext] No user session found
+BROWSER: [AuthContext] Initialization complete
+BROWSER: [AuthContext] Auth state changed: INITIAL_SESSION
+BROWSER: Failed to load resource: the server responded with a status of 404 (Not Found)
+BROWSER: [Vercel Web Analytics] Failed to load script from /_vercel/insights/script.js. Be sure to enable Web Analytics for your project and deploy again. See https://vercel.com/docs/analytics/quickstart for more information.
+BROWSER: [AuthContext] User signed out

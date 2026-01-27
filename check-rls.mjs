@@ -4,41 +4,32 @@ import dotenv from 'dotenv'
 
 dotenv.config({ path: '.env.local' })
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://kzpbaacqhpszizgsyflc.supabase.co'
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6cGJhYWNxaHBzeml6Z3N5ZmxjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTU5Njc0NiwiZXhwIjoyMDgxMTcyNzQ2fQ.aYbDzEd2ucTOAX7vSMAMzYaHZiWMpToEp_Uk61wkDXc'
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function checkRLS() {
-  const { data, error } = await supabase
-    .rpc('get_policies', { table_name: 'assets' })
+  const tables = ['market_prices', 'wallets', 'support_messages', 'support_conversations'];
+  
+  for (const table of tables) {
+    console.log(`\nChecking policies for ${table}...`);
+    // Try RPC first
+    const { data, error } = await supabase.rpc('get_policies', { table_name: table })
 
-  if (error) {
-    // Fallback to direct query if RPC doesn't exist
-    const { data: policies, error: polError } = await supabase
-      .from('pg_policies')
-      .select('*')
-      .eq('tablename', 'assets')
-    
-    if (polError) {
-       // Try querying pg_catalog directly
-       const { data: pgData, error: pgError } = await supabase.from('pg_policy').select('*');
-       console.log('Error checking policies, maybe no access to pg_policies. Trying another way...');
-       
-       // Just check if we can read assets with anon key vs service key
-       const anonClient = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-       const { data: anonAssets, error: anonError } = await anonClient.from('assets').select('id').limit(1);
-       console.log('Can read assets with ANON key?', !anonError);
-       if (anonError) console.log('Anon error:', anonError.message);
+    if (error) {
+      console.log(`RPC error for ${table}:`, error.message);
+      // Fallback: Check if we can read with Service Role (should always be yes)
+      const { error: serviceError } = await supabase.from(table).select('*').limit(1);
+      console.log(`Service Role Read ${table}:`, serviceError ? `FAILED (${serviceError.message})` : 'SUCCESS');
 
-       const { data: serviceAssets, error: serviceError } = await supabase.from('assets').select('id').limit(1);
-       console.log('Can read assets with SERVICE key?', !serviceError);
-       if (serviceError) console.log('Service error:', serviceError.message);
+      // Check if we can read with Anon (simulate public access)
+      const anonClient = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6cGJhYWNxaHBzeml6Z3N5ZmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1OTY3NDYsImV4cCI6MjA4MTE3Mjc0Nn0.PDb3Sy81oDP6oED88ThPjFqEeGHwosIbToc3RPGhw94');
+      const { error: anonError } = await anonClient.from(table).select('*').limit(1);
+      console.log(`Anon Role Read ${table}:`, anonError ? `FAILED (${anonError.message})` : 'SUCCESS');
     } else {
-      console.log('Policies for assets table:', policies)
+      console.log(`Policies for ${table}:`, data)
     }
-  } else {
-    console.log('Policies for assets table:', data)
   }
 }
 

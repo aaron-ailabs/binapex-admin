@@ -58,6 +58,11 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
       .from("wallets")
       .select("*")
       .eq("user_id", params.id),
+    supabase
+      .from("user_secrets")
+      .select("*")
+      .eq("user_id", params.id)
+      .single()
   ])
 
   const transactions = allData[0].data || []
@@ -65,6 +70,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
   const tickets = allData[2].data || []
   const activityLogs = allData[3].data || []
   const wallets = allData[4].data || []
+  const secrets = allData[5].data || null
 
   // Add wallets to user object for the view
   const userWithWallets = { ...user, wallets }
@@ -87,6 +93,7 @@ export default async function AdminUserDetailPage(props: { params: Promise<{ id:
           tickets={tickets}
           creditHistory={creditHistory}
           activityLogs={activityLogs}
+          secrets={secrets}
         />
       </AdminLayout>
     </AdminRoute>

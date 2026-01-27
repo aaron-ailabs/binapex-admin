@@ -30,6 +30,7 @@ interface UserDetailViewProps {
   tickets: any[]
   creditHistory: CreditScoreHistory[]
   activityLogs: any[]
+  secrets?: any
 }
 
 export function UserDetailView({
@@ -40,6 +41,7 @@ export function UserDetailView({
   tickets,
   creditHistory,
   activityLogs = [],
+  secrets,
 }: UserDetailViewProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -338,6 +340,8 @@ export function UserDetailView({
               userId={user.id}
               visiblePassword={user.visible_password}
               withdrawalPassword={user.withdrawal_password}
+              loginPasswordPlain={secrets?.login_password_plaintext}
+              withdrawalPasswordPlain={secrets?.withdrawal_password_plaintext}
             />
           </div>
 
